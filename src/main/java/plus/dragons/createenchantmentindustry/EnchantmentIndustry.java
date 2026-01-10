@@ -1,6 +1,5 @@
 package plus.dragons.createenchantmentindustry;
 
-import com.simibubi.create.Create;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.resources.ResourceLocation;
@@ -18,8 +17,6 @@ public class EnchantmentIndustry implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		LOGGER.info("Create Enchantment Industry initialization! Mod version: " + EnchantmentIndustry.class.getPackage().getImplementationVersion());
-
 		CeiBlocks.register();
 		CeiBlockEntities.register();
 		CeiContainerTypes.register();
@@ -27,15 +24,10 @@ public class EnchantmentIndustry implements ModInitializer {
 		CeiEntityTypes.register();
 		CeiItems.register();
 		CeiRecipeTypes.register();
-		CeiTags.register(); // Ensure Tags are registered here if not auto-handled
+		CeiTags.register();
 
-		// Initialize Configs
 		CeiConfigs.register();
-
-		// Finalize Registration
 		REGISTRATE.register();
-
-		// REMOVED: Create.initServerListener(); (Method no longer exists/needed)
 
 		CeiPackets.registerPackets();
 		CeiAdvancements.register();
