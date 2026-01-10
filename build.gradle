@@ -2,9 +2,10 @@
 //file:noinspection GroovyAccessibility
 //file:noinspection GradlePackageVersionRange
 plugins {
-	id "fabric-loom" version "1.5.+"
+	id "fabric-loom" version "1.7-SNAPSHOT"
 	id "maven-publish"
 	id "me.modmuss50.mod-publish-plugin" version "0.3.5"
+	id "idea"
 }
 
 sourceCompatibility = JavaVersion.VERSION_17
@@ -26,9 +27,9 @@ repositories {
 	maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" } // Forge Config API Port
 	maven { url = "https://maven.jamieswhiteshirt.com/libs-release" } // Reach Entity Attributes
 	maven { url = "https://jitpack.io/" } // Mixin Extras, Fabric ASM
-	maven { url = "https://maven.tterrag.com/" } // Flywheel
 	maven { url = "https://maven.dragons.plus/releases" } // DragonLib
 	maven { url = "https://maven.dragons.plus/snapshots" } // DragonLib snapshot
+	maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
 	mavenLocal() // Fast test
 }
 
@@ -74,7 +75,9 @@ dependencies {
 	modImplementation("net.fabricmc.fabric-api:fabric-api:${fabric_api_version}")
 
 	// Create - dependencies are added transitively
-	modImplementation("com.simibubi.create:create-fabric-${minecraft_version}:${create_version}")
+	modImplementation("com.simibubi.create:create-fabric-${minecraft_version}:${create_version}") {transitive = false}
+
+	modImplementation("dev.engine-room.flywheel:flywheel-fabric-${minecraft_version}:${flywheel_version}")
 
 
 	// Create Dragon Lib
