@@ -3,9 +3,8 @@ package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.d
 import com.simibubi.create.content.processing.recipe.ProcessingRecipe;
 import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 
-import io.github.fabricators_of_create.porting_lib.transfer.item.ItemStackHandlerContainer;
-import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
-import net.minecraft.world.level.Level;
+
+import net.fabricmc.loader.impl.lib.tinyremapper.api.TrLogger;
 import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 import plus.dragons.createenchantmentindustry.entry.CeiRecipeTypes;
 
@@ -52,7 +51,7 @@ public class DisenchantRecipe extends ProcessingRecipe<ItemStackHandlerContainer
     }
 
 	@Override
-	public boolean matches(ItemStackHandlerContainer container, Level level) {
+	public boolean matches(ItemStackHandlerContainer container, TrLogger.Level level) {
 		return ingredients.get(0).test(container.getItem(0));
 	}
 }

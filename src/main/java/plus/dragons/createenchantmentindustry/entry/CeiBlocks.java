@@ -7,7 +7,7 @@ import com.simibubi.create.AllCreativeModeTabs;
 import com.simibubi.create.content.processing.AssemblyOperatorBlockItem;
 import com.simibubi.create.foundation.data.AssetLookup;
 import com.simibubi.create.foundation.data.SharedProperties;
-import com.tterrag.registrate.util.entry.BlockEntry;
+
 
 import net.minecraft.client.renderer.RenderType;
 import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.DisenchanterBlock;
