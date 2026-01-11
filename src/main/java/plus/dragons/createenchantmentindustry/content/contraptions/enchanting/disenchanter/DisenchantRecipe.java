@@ -3,55 +3,63 @@ package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.d
 import com.simibubi.create.content.processing.recipe.ProcessingRecipe;
 import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 
-
-import net.fabricmc.loader.impl.lib.tinyremapper.api.TrLogger;
+import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
+import net.minecraft.world.Container;
 import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 import plus.dragons.createenchantmentindustry.entry.CeiRecipeTypes;
 
-public class DisenchantRecipe extends ProcessingRecipe<ItemStackHandlerContainer> {
+public class DisenchantRecipe extends ProcessingRecipe<Container> {
 
-    private final long experience;
+	private final long experience;
 
-    public DisenchantRecipe(ProcessingRecipeBuilder.ProcessingRecipeParams params) {
-        super(CeiRecipeTypes.DISENCHANTING, params);
-        if (fluidResults.isEmpty())
-            throw new IllegalArgumentException("Illegal Disenchanting Recipe: " + id.toString() + " has no fluid output!");
-        FluidStack fluid = fluidResults.get(0);
-        if (!fluid.getFluid().isSame(CeiFluids.EXPERIENCE.get().getSource()))
-            throw new IllegalArgumentException("Illegal Disenchanting Recipe: " + id.toString() + " has wrong type of fluid output!");
-        this.experience = fluid.getAmount();
-    }
+	public DisenchantRecipe(ProcessingRecipeBuilder.ProcessingRecipeParams params) {
+		super(CeiRecipeTypes.DISENCHANTING, params);
 
-    @Override
-    protected int getMaxInputCount() {
-        return 1;
-    }
+		if (fluidResults.isEmpty())
+			throw new IllegalArgumentException(
+					"Illegal Disenchanting Recipe: " + id + " has no fluid output!"
+			);
 
-    @Override
-    protected int getMaxOutputCount() {
-        return 1;
-    }
+		FluidStack fluid = fluidResults.get(0);
 
-    @Override
-    protected int getMaxFluidOutputCount() {
-        return 1;
-    }
+		if (!fluid.getFluid().isSame(CeiFluids.EXPERIENCE.get().getSource()))
+			throw new IllegalArgumentException(
+					"Illegal Disenchanting Recipe: " + id + " has wrong fluid output!"
+			);
 
-    @Override
-    protected boolean canSpecifyDuration() {
-        return false;
-    }
-
-    public boolean hasNoResult() {
-        return results.isEmpty();
-    }
-
-    public long getExperience() {
-        return experience;
-    }
+		this.experience = fluid.getAmount();
+	}
 
 	@Override
-	public boolean matches(ItemStackHandlerContainer container, TrLogger.Level level) {
+	protected int getMaxInputCount() {
+		return 1;
+	}
+
+	@Override
+	protected int getMaxOutputCount() {
+		return 1;
+	}
+
+	@Override
+	protected int getMaxFluidOutputCount() {
+		return 1;
+	}
+
+	@Override
+	protected boolean canSpecifyDuration() {
+		return false;
+	}
+
+	public boolean hasNoResult() {
+		return results.isEmpty();
+	}
+
+	public long getExperience() {
+		return experience;
+	}
+
+	@Override
+	public boolean matches(Container container, net.minecraft.world.level.Level level) {
 		return ingredients.get(0).test(container.getItem(0));
 	}
 }

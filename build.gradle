@@ -76,7 +76,9 @@ dependencies {
 	// Create Fabric 6
 	modImplementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
 
-	modImplementation("dev.engine-room.flywheel:flywheel-fabric-${minecraft_version}:${flywheel_version}")
+	// Ponder
+	def ponderVersion = project.hasProperty("ponder_version") ? project.property("ponder_version") : "1.0.92"
+	modImplementation "net.createmod.ponder:Ponder-Fabric-1.20.1:${ponderVersion}"
 
 	// Porting Lib (required by Create Fabric)
 	modImplementation(include("io.github.fabricators_of_create.Porting-Lib:data:${project.porting_lib_version}"))

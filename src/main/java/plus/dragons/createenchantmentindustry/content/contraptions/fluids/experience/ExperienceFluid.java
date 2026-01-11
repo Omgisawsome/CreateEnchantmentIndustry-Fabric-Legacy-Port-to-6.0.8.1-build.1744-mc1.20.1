@@ -1,69 +1,64 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.fluids.experience;
 
-import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.UNIT_PER_MB;
-
-import org.jetbrains.annotations.Nullable;
-
-import com.simibubi.create.content.fluids.VirtualFluid;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
-public class ExperienceFluid extends VirtualFluid {
+public class ExperienceFluid {
 
-    protected final int xpRatio;
+	public static final int UNIT_PER_MB = 81; // keep consistent everywhere
+	protected final int xpRatio;
 
-    public ExperienceFluid(int xpRatio, Properties properties) {
-        super(properties);
-        this.xpRatio = xpRatio;
-    }
+	public ExperienceFluid(int xpRatio) {
+		this.xpRatio = xpRatio;
+	}
 
-    public ExperienceFluid(Properties properties) {
-        this(1, properties);
-    }
+	public ExperienceFluid() {
+		this(1);
+	}
 
-    public ExperienceOrb convertToOrb(Level level, double x, double y, double z, int fluidAmount) {
-        return new ExperienceOrb(level, x, y, z, fluidAmount);
-    }
+	public static ExperienceOrb convertToOrb(ServerLevel level, Vec3 pos, int xp) {
+		return new ExperienceOrb(level, pos.x, pos.y, pos.z, xp);
+	}
 
-    public void drop(ServerLevel level, Vec3 pos, int realFluidAmount) {
-		var fluidAmount = realFluidAmount / UNIT_PER_MB;
-        while(fluidAmount > 0) {
-            int orbSize = ExperienceOrb.getExperienceValue(fluidAmount);
-            fluidAmount -= orbSize;
-            if (!ExperienceOrb.tryMergeToExisting(level, pos, orbSize)) {
-                level.addFreshEntity(this.convertToOrb(level, pos.x, pos.y, pos.z, orbSize));
-            }
-        }
-    }
+	public static void drop(ServerLevel level, Vec3 pos, int realFluidAmount) {
+		int fluidAmount = realFluidAmount / UNIT_PER_MB;
 
-    public void awardOrDrop(@Nullable Player player, ServerLevel level, Vec3 pos, Vec3 speed, int realAmount) {
-		var amount = realAmount / UNIT_PER_MB;
-        var orb = this.convertToOrb(level, pos.x, pos.y, pos.z, amount);
-        if (player == null) {
-            if (!ExperienceOrb.tryMergeToExisting(level, pos, orb.value)) {
-                orb.setDeltaMovement(speed);
-                level.addFreshEntity(orb);
-            }
-        } else {
-            int left = orb.repairPlayerItems(player, orb.value);
-            if (left > 0) {
-                player.giveExperiencePoints(left);
-                this.applyAdditionalEffects(player, left);
-            }
-        }
-    }
+		while (fluidAmount > 0) {
+			int orbSize = ExperienceOrb.getExperienceValue(fluidAmount);
+			fluidAmount -= orbSize;
 
-    public void applyAdditionalEffects(LivingEntity entity, int expAmount) {
+			if (!ExperienceOrb.tryMergeToExisting(level, pos, orbSize)) {
+				level.addFreshEntity(convertToOrb(level, pos, orbSize));
+			}
+		}
+	}
 
-    }
+	public static void awardOrDrop(
+			@Nullable Player player,
+			ServerLevel level,
+			Vec3 pos,
+			Vec3 speed,
+			int realAmount
+	) {
+		int amount = realAmount / UNIT_PER_MB;
 
-    public int getXpRatio() {
-        return xpRatio;
-    }
+		if (player == null) {
+			drop(level, pos, realAmount);
+			return;
+		}
 
+		player.giveExperiencePoints(amount);
+	}
+
+	public void applyAdditionalEffects(LivingEntity entity, int expAmount) {
+		// optional hook
+	}
+
+	public int getXpRatio() {
+		return xpRatio;
+	}
 }

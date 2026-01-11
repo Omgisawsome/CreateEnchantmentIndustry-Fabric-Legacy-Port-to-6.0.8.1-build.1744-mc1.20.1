@@ -16,7 +16,6 @@ import com.simibubi.create.content.processing.burner.BlazeBurnerBlock;
 import com.simibubi.create.foundation.advancement.AdvancementBehaviour;
 import com.simibubi.create.foundation.block.IBE;
 import com.simibubi.create.foundation.blockEntity.ComparatorUtil;
-import com.simibubi.create.foundation.utility.Lang;
 
 import io.github.fabricators_of_create.porting_lib.util.NetworkHooks;
 import net.minecraft.core.BlockPos;
@@ -224,24 +223,24 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
         };
     }
 
-    public enum HeatLevel implements StringRepresentable {
-        SMOULDERING, KINDLED, SEETHING,;
+	public enum HeatLevel implements StringRepresentable {
+		SMOULDERING, KINDLED, SEETHING;
 
-        public static HeatLevel byIndex(int index) {
-            return values()[index];
-        }
+		public static HeatLevel byIndex(int index) {
+			return values()[index];
+		}
 
-        public HeatLevel nextActiveLevel() {
-            return byIndex(ordinal() % (values().length - 1) + 1);
-        }
+		public HeatLevel nextActiveLevel() {
+			return byIndex(ordinal() % (values().length - 1) + 1);
+		}
 
-        public boolean isAtLeast(HeatLevel heatLevel) {
-            return this.ordinal() >= heatLevel.ordinal();
-        }
+		public boolean isAtLeast(HeatLevel heatLevel) {
+			return this.ordinal() >= heatLevel.ordinal();
+		}
 
-        @Override
-        public String getSerializedName() {
-            return Lang.asId(name());
+		@Override
+		public String getSerializedName() {
+			return name().toLowerCase();
         }
     }
 }

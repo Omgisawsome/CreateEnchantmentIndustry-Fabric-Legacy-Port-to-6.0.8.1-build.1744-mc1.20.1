@@ -21,12 +21,12 @@ import com.simibubi.create.AllCreativeModeTabs;
 import com.simibubi.create.AllFluids;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.foundation.data.CreateRegistrate;
-import com.tterrag.registrate.util.entry.RegistryEntry;
 
 import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import it.unimi.dsi.fastutil.objects.ReferenceLinkedOpenHashSet;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -38,73 +38,66 @@ import plus.dragons.createenchantmentindustry.entry.CeiItems;
 @Mixin(targets = "com.simibubi.create.AllCreativeModeTabs$RegistrateDisplayItemsGenerator")
 public abstract class RegistrateDisplayItemsGeneratorMixin {
 
-	@Shadow(remap = false) @Final private Supplier<AllCreativeModeTabs.TabInfo> tabFilter;
+	@Shadow(remap = false) @Final private Supplier<CreativeModeTab> tabFilter;
 
 	@SuppressWarnings("unchecked")
-	private static void addOrdering(List orderings, String name, Item item, Item anchor) {
-		Class<?> cls;
-		Method method;
-		Object ordering;
-
+	private static void addOrdering(List<Object> orderings, String name, Item item, Item anchor) {
 		try {
-			cls = Class.forName("com.simibubi.create.AllCreativeModeTabs$RegistrateDisplayItemsGenerator$ItemOrdering");
-			method = cls.getMethod(name, Item.class, Item.class);
-			ordering = method.invoke(null, item, anchor);
+			Class<?> cls = Class.forName("com.simibubi.create.AllCreativeModeTabs$RegistrateDisplayItemsGenerator$ItemOrdering");
+			Method method = cls.getMethod(name, Item.class, Item.class);
+			Object ordering = method.invoke(null, item, anchor);
+			orderings.add(ordering);
 		} catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
 			throw new RuntimeException(e);
 		}
-
-        orderings.add(ordering);
 	}
 
-	@Inject(method = "makeOrderings", at = @At(value = "TAIL"), cancellable = true, remap = false)
-	private static void injectMakeOrderingsReturn(CallbackInfoReturnable<List<?>> cir)
-	{
+	@Inject(method = "makeOrderings", at = @At("TAIL"), cancellable = true, remap = false)
+	private static void injectMakeOrderingsReturn(CallbackInfoReturnable<List<?>> cir) {
 		List<?> orderings = cir.getReturnValue();
 
 		Map<Item, Item> afterOrderings = Map.of(
-			CeiBlocks.DISENCHANTER.asItem(), AllBlocks.ITEM_DRAIN.asItem(),
-			CeiBlocks.PRINTER.asItem(), AllBlocks.SPOUT.asItem(),
-			CeiItems.ENCHANTING_GUIDE.asItem(), AllBlocks.BLAZE_BURNER.asItem(),
-			CeiItems.HYPER_EXP_BOTTLE.asItem(), AllItems.SUPER_GLUE.asItem(),
-			AllFluids.HONEY.get().getBucket().asItem(), CeiFluids.INK.get().getBucket().asItem(),
-			AllFluids.CHOCOLATE.get().getBucket().asItem(), CeiFluids.INK.get().getBucket().asItem()
+				CeiBlocks.DISENCHANTER.asItem(), AllBlocks.ITEM_DRAIN.asItem(),
+				CeiBlocks.PRINTER.asItem(), AllBlocks.SPOUT.asItem(),
+				CeiItems.ENCHANTING_GUIDE.asItem(), AllBlocks.BLAZE_BURNER.asItem(),
+				CeiItems.HYPER_EXP_BOTTLE.asItem(), AllItems.SUPER_GLUE.asItem(),
+				AllFluids.HONEY.get().getBucket().asItem(), CeiFluids.INK.get().getBucket().asItem(),
+				AllFluids.CHOCOLATE.get().getBucket().asItem(), CeiFluids.INK.get().getBucket().asItem()
 		);
 
-		afterOrderings.forEach((item, anchor) -> {
-			addOrdering(orderings, "after", item, anchor);
-		});
+		afterOrderings.forEach((item, anchor) -> addOrdering((List<Object>) orderings, "after", item, anchor));
 
 		cir.setReturnValue(orderings);
 	}
 
-	@Inject(method = "collectBlocks", at = @At(value = "TAIL"), cancellable = true, remap = false)
+	@Inject(method = "collectBlocks", at = @At("TAIL"), cancellable = true, remap = false)
 	private void injectCollectBlocks(Predicate<Item> exclusionPredicate, CallbackInfoReturnable<List<Item>> cir) {
 		List<Item> items = cir.getReturnValue();
-		for (RegistryEntry<Block> entry : REGISTRATE.getAll(Registries.BLOCK)) {
-			if (!CreateRegistrate.isInCreativeTab(entry, tabFilter.get().key()))
+
+		for (Block block : REGISTRATE.getAll(Registries.BLOCK)) {
+			if (!CreateRegistrate.isInCreativeTab(block, tabFilter.get()))
 				continue;
-			Item item = entry.get().asItem();
-			if (item == Items.AIR)
+			Item item = block.asItem();
+			if (item == Items.AIR || exclusionPredicate.test(item))
 				continue;
-			if (!exclusionPredicate.test(item))
-				items.add(item);
+			items.add(item);
 		}
+
 		cir.setReturnValue(new ReferenceArrayList<>(new ReferenceLinkedOpenHashSet<>(items)));
 	}
 
-	@Inject(method = "collectItems", at = @At(value = "TAIL"), cancellable = true, remap = false)
+	@Inject(method = "collectItems", at = @At("TAIL"), cancellable = true, remap = false)
 	private void injectCollectItems(Predicate<Item> exclusionPredicate, CallbackInfoReturnable<List<Item>> cir) {
 		List<Item> items = cir.getReturnValue();
-		for (RegistryEntry<Item> entry : REGISTRATE.getAll(Registries.ITEM)) {
-			if (!CreateRegistrate.isInCreativeTab(entry, tabFilter.get().key()))
+
+		for (Item item : REGISTRATE.getAll(Registries.ITEM)) {
+			if (!CreateRegistrate.isInCreativeTab(item, tabFilter.get()))
 				continue;
-			Item item = entry.get();
-			if (item instanceof BlockItem)
+			if (item instanceof BlockItem || exclusionPredicate.test(item))
 				continue;
-			if (!exclusionPredicate.test(item))
-				items.add(item);
+			items.add(item);
 		}
+
 		cir.setReturnValue(new ReferenceArrayList<>(items));
 	}
 }

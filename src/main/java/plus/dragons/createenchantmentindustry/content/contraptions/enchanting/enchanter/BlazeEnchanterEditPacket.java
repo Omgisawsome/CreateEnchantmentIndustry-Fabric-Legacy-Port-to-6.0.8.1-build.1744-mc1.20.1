@@ -9,6 +9,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
+import javax.naming.Context;
+
 public class BlazeEnchanterEditPacket extends SimplePacketBase {
 
     private final int index;

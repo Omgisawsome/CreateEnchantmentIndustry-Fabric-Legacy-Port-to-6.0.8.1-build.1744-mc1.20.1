@@ -1,7 +1,5 @@
 package plus.dragons.createenchantmentindustry.compat.jei.category;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-
 import com.simibubi.create.compat.jei.category.CreateRecipeCategory;
 import com.simibubi.create.foundation.gui.AllGuiTextures;
 
@@ -15,7 +13,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.DisenchantRecipe;
 import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 
-@ParametersAreNonnullByDefault
 public class DisenchantingCategory extends CreateRecipeCategory<DisenchantRecipe> {
 
     private final IDrawable disenchanter = new DisenchanterDrawable();
