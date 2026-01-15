@@ -5,27 +5,26 @@ import com.simibubi.create.content.redstone.displayLink.source.SingleLineDisplay
 import com.simibubi.create.content.redstone.displayLink.target.DisplayTargetStats;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.WrittenBookItem;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
-
-import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.LANG;
 
 public class PrinterDisplaySource extends SingleLineDisplaySource {
-    @Override
-    protected MutableComponent provideLine(DisplayLinkContext context, DisplayTargetStats stats) {
-        if (!(context.getSourceBlockEntity() instanceof PrinterBlockEntity printer))
-            return EMPTY_LINE;
-        if(printer.getCopyTarget().isEmpty()){
-            return EnchantmentIndustry.LANG.translate("gui.goggles.printer.no_target").component();
-        } else {
-            return printer.printEntry.getDisplaySourceContent(printer.getCopyTarget());
-        }
-    }
 
-    @Override
-    protected boolean allowsLabeling(DisplayLinkContext context) {
-        return false;
-    }
+	@Override
+	protected MutableComponent provideLine(DisplayLinkContext context, DisplayTargetStats stats) {
+		if (!(context.getSourceBlockEntity() instanceof PrinterBlockEntity printer))
+			return EMPTY_LINE;
+
+		if (printer.getCopyTarget().isEmpty()) {
+			// Replaced LANG.translate(...) with Component.translatable(...)
+			return Component.translatable("gui.goggles.printer.no_target");
+		} else if (printer.printEntry != null) {
+			return printer.printEntry.getDisplaySourceContent(printer.getCopyTarget());
+		} else {
+			return EMPTY_LINE;
+		}
+	}
+
+	@Override
+	protected boolean allowsLabeling(DisplayLinkContext context) {
+		return false;
+	}
 }

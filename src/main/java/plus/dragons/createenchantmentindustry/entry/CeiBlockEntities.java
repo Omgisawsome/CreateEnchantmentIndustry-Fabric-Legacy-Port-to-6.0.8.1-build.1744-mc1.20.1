@@ -12,23 +12,23 @@ import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.REGISTR
 
 public class CeiBlockEntities {
 
-    public static final BlockEntityEntry<DisenchanterBlockEntity> DISENCHANTER = REGISTRATE
-            .blockEntity("disenchanter", DisenchanterBlockEntity::new)
-            .validBlocks(CeiBlocks.DISENCHANTER)
-            .renderer(() -> DisenchanterRenderer::new)
-            .register();
+	public static final BlockEntityEntry<DisenchanterBlockEntity> DISENCHANTER = REGISTRATE
+			.blockEntity("disenchanter", DisenchanterBlockEntity::new)
+			.validBlocks(CeiBlocks.DISENCHANTER)
+			.renderer(() -> DisenchanterRenderer::new)
+			.register();
 
-    public static final BlockEntityEntry<PrinterBlockEntity> PRINTER = REGISTRATE
-            .blockEntity("printer", PrinterBlockEntity::new)
-            .validBlocks(CeiBlocks.PRINTER)
-            .renderer(() -> PrinterRenderer::new)
-            .register();
+	public static final BlockEntityEntry<PrinterBlockEntity> PRINTER = REGISTRATE
+			.blockEntity("printer", PrinterBlockEntity::new)
+			.validBlocks(CeiBlocks.PRINTER)
+			.renderer(() -> PrinterRenderer::new)
+			.register();
 
-    public static final BlockEntityEntry<BlazeEnchanterBlockEntity> BLAZE_ENCHANTER = REGISTRATE
-            .blockEntity("blaze_enchanter", BlazeEnchanterBlockEntity::new)
-            .validBlocks(CeiBlocks.BLAZE_ENCHANTER)
-            .renderer(() -> BlazeEnchanterRenderer::new)
-            .register();
-    
-    public static void register() {}
+	public static final BlockEntityEntry<BlazeEnchanterBlockEntity> BLAZE_ENCHANTER = REGISTRATE
+			.blockEntity("blaze_enchanter", BlazeEnchanterBlockEntity::new)
+			.validBlocks(CeiBlocks.BLAZE_ENCHANTER)
+			.renderer(() -> BlazeEnchanterRenderer::new)
+			.register();
+
+	public static void register() {}
 }

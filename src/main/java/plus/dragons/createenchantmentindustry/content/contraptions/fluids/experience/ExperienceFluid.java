@@ -4,12 +4,19 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Base Experience Fluid logic.
+ * Create 6 / Fabric compatible.
+ */
 public class ExperienceFluid {
 
-	public static final int UNIT_PER_MB = 81; // keep consistent everywhere
+	/** 81 units = 1 XP (matches vanilla orb math) */
+	public static final int UNIT_PER_MB = 81;
+
 	protected final int xpRatio;
 
 	public ExperienceFluid(int xpRatio) {
@@ -20,42 +27,65 @@ public class ExperienceFluid {
 		this(1);
 	}
 
-	public static ExperienceOrb convertToOrb(ServerLevel level, Vec3 pos, int xp) {
-		return new ExperienceOrb(level, pos.x, pos.y, pos.z, xp);
+	/* ------------------------------------------------------------
+	 * Orb conversion
+	 * ------------------------------------------------------------ */
+
+	public ExperienceOrb convertToOrb(
+			Level level,
+			double x,
+			double y,
+			double z,
+			int realFluidAmount
+	) {
+		int xp = (realFluidAmount / UNIT_PER_MB) * xpRatio;
+		return new ExperienceOrb(level, x, y, z, xp);
 	}
 
-	public static void drop(ServerLevel level, Vec3 pos, int realFluidAmount) {
-		int fluidAmount = realFluidAmount / UNIT_PER_MB;
+	/* ------------------------------------------------------------
+	 * XP handling
+	 * ------------------------------------------------------------ */
 
-		while (fluidAmount > 0) {
-			int orbSize = ExperienceOrb.getExperienceValue(fluidAmount);
-			fluidAmount -= orbSize;
-
-			if (!ExperienceOrb.tryMergeToExisting(level, pos, orbSize)) {
-				level.addFreshEntity(convertToOrb(level, pos, orbSize));
-			}
-		}
-	}
-
-	public static void awardOrDrop(
+	public void awardOrDrop(
 			@Nullable Player player,
 			ServerLevel level,
 			Vec3 pos,
 			Vec3 speed,
-			int realAmount
+			int realFluidAmount
 	) {
-		int amount = realAmount / UNIT_PER_MB;
+		int xp = (realFluidAmount / UNIT_PER_MB) * xpRatio;
 
-		if (player == null) {
-			drop(level, pos, realAmount);
+		if (xp <= 0)
+			return;
+
+		if (player != null) {
+			player.giveExperiencePoints(xp);
+			applyAdditionalEffects(player, xp);
 			return;
 		}
 
-		player.giveExperiencePoints(amount);
+		drop(level, pos, xp);
 	}
 
-	public void applyAdditionalEffects(LivingEntity entity, int expAmount) {
-		// optional hook
+	protected void drop(ServerLevel level, Vec3 pos, int xp) {
+		while (xp > 0) {
+			int orbValue = ExperienceOrb.getExperienceValue(xp);
+			xp -= orbValue;
+
+			if (!ExperienceOrb.tryMergeToExisting(level, pos, orbValue)) {
+				level.addFreshEntity(
+						new ExperienceOrb(level, pos.x, pos.y, pos.z, orbValue)
+				);
+			}
+		}
+	}
+
+	/* ------------------------------------------------------------
+	 * Extension hooks
+	 * ------------------------------------------------------------ */
+
+	public void applyAdditionalEffects(LivingEntity entity, int xpAmount) {
+		// overridden by HyperExperienceFluid
 	}
 
 	public int getXpRatio() {

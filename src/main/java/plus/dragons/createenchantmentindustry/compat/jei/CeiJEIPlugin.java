@@ -30,7 +30,7 @@ import plus.dragons.createenchantmentindustry.entry.CeiRecipeTypes;
 public class CeiJEIPlugin implements IModPlugin {
 
 	private static final ResourceLocation ID =
-			new ResourceLocation(EnchantmentIndustry.ID, "jei_plugin");
+			new ResourceLocation(EnchantmentIndustry.MOD_ID, "jei_plugin");
 
 	private final List<CreateRecipeCategory<?>> allCategories = new ArrayList<>();
 	private IIngredientManager ingredientManager;
@@ -53,7 +53,7 @@ public class CeiJEIPlugin implements IModPlugin {
 		ingredientManager = registration.getIngredientManager();
 		allCategories.forEach(c -> c.registerRecipes(registration));
 
-		// Fabric: hide flowing fluids from JEI
+		// Hide flowing fluids from JEI (Fabric)
 		ingredientManager.removeIngredientsAtRuntime(
 				FabricTypes.FLUID_STACK,
 				List.of(
@@ -70,7 +70,7 @@ public class CeiJEIPlugin implements IModPlugin {
 	}
 
 	private static <T extends Recipe<?>> RecipeCategoryBuilder<T> builder(Class<T> cls) {
-		return new RecipeCategoryBuilder<>(EnchantmentIndustry.ID, cls);
+		return new RecipeCategoryBuilder<>(EnchantmentIndustry.MOD_ID, cls);
 	}
 
 	private void loadCategories() {
@@ -78,7 +78,7 @@ public class CeiJEIPlugin implements IModPlugin {
 
 		allCategories.add(
 				builder(DisenchantRecipe.class)
-						.addTypedRecipes(CeiRecipeTypes.DISENCHANTING)
+						.addTypedRecipes(() -> CeiRecipeTypes.DISENCHANTING.getType())
 						.catalyst(CeiBlocks.DISENCHANTER::get)
 						.emptyBackground(177, 50)
 						.build("disenchanting", DisenchantingCategory::new)

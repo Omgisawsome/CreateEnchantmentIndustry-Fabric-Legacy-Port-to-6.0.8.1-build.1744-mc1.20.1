@@ -17,10 +17,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathComputationType;
-import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -28,17 +29,20 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import plus.dragons.createenchantmentindustry.entry.CeiBlockEntities;
-import plus.dragons.createenchantmentindustry.entry.CeiBlocks;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @SuppressWarnings("deprecation")
 public class DisenchanterBlock extends Block
-		implements IWrenchable, IBE<DisenchanterBlockEntity> {
+		implements IWrenchable, IBE<DisenchanterBlockEntity>, EntityBlock {
 
 	public DisenchanterBlock(Properties properties) {
 		super(properties);
+	}
+
+	/* -------------------- BLOCK ENTITY -------------------- */
+
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return getBlockEntityType().create(pos, state);
 	}
 
 	@Override
@@ -50,6 +54,8 @@ public class DisenchanterBlock extends Block
 	public BlockEntityType<? extends DisenchanterBlockEntity> getBlockEntityType() {
 		return CeiBlockEntities.DISENCHANTER.get();
 	}
+
+	/* -------------------- INTERACTION -------------------- */
 
 	@Override
 	public InteractionResult use(
@@ -92,8 +98,8 @@ public class DisenchanterBlock extends Block
 							be.notifyUpdate();
 							heldItem.shrink(1);
 						}
+						return InteractionResult.sidedSuccess(level.isClientSide);
 					}
-					return InteractionResult.sidedSuccess(level.isClientSide);
 				}
 				return InteractionResult.PASS;
 			});
@@ -101,6 +107,8 @@ public class DisenchanterBlock extends Block
 
 		return InteractionResult.PASS;
 	}
+
+	/* -------------------- SHAPE -------------------- */
 
 	@Override
 	public VoxelShape getShape(
@@ -111,6 +119,8 @@ public class DisenchanterBlock extends Block
 	) {
 		return AllShapes.CASING_13PX.get(Direction.UP);
 	}
+
+	/* -------------------- LIFECYCLE -------------------- */
 
 	@Override
 	public void onRemove(
@@ -135,12 +145,7 @@ public class DisenchanterBlock extends Block
 		AdvancementBehaviour.setPlacedBy(level, pos, placer);
 	}
 
-	@Override
-	public List<ItemStack> getDrops(BlockState state, LootContext.Builder builder) {
-		List<ItemStack> drops = new ArrayList<>();
-		drops.add(CeiBlocks.DISENCHANTER.asStack());
-		return drops;
-	}
+	/* -------------------- COMPARATOR -------------------- */
 
 	@Override
 	public boolean hasAnalogOutputSignal(BlockState state) {

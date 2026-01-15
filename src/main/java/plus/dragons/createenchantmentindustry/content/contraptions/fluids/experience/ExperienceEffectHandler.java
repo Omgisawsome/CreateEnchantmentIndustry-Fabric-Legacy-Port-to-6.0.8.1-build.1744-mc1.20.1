@@ -1,64 +1,69 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.fluids.experience;
 
 import com.simibubi.create.content.fluids.OpenEndedPipe;
-import com.simibubi.create.foundation.ponder.PonderWorld;
-import com.simibubi.create.foundation.utility.VecHelper;
 
 import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import plus.dragons.createenchantmentindustry.foundation.advancement.CeiAdvancements;
 
-public class ExperienceEffectHandler implements OpenEndedPipe.IEffectHandler {
+/**
+ * Fabric / Create 6 compatible experience fluid effect handler.
+ *
+ * Ponder-only logic has been removed.
+ * This handler now runs ONLY on the logical server.
+ */
+public final class ExperienceEffectHandler {
 
-    @Override
-    public boolean canApplyEffects(OpenEndedPipe pipe, FluidStack fluid) {
-        return fluid.getFluid() instanceof ExperienceFluid;
-    }
+	public static boolean canApply(OpenEndedPipe pipe, FluidStack fluid) {
+		return fluid.getFluid() instanceof ExperienceFluid;
+	}
 
-    @Override
-    public void applyEffects(OpenEndedPipe pipe, FluidStack fluidStack) {
-        if (pipe.getWorld() instanceof PonderWorld){
-            var level = pipe.getWorld();
-            var pos = pipe.getOutputPos();
-            var pipePos = pipe.getPos();
-            var speed = new Vec3(pos.getX() - pipePos.getX() + Math.random() * 0.1,
-                    pos.getY() - pipePos.getY() + Math.random() * 0.1,
-                    pos.getZ() - pipePos.getZ() + Math.random() * 0.1).scale(0.2);
-            var orbPos = VecHelper.getCenterOf(pos);
-            var orb = new ExperienceOrb(level, orbPos.x, orbPos.y, orbPos.z, 1);
-            orb.setDeltaMovement(speed);
-            level.addFreshEntity(orb);
-            return;
-        }
-        if (!(pipe.getWorld() instanceof ServerLevel level))
-            return;
-        var players = level.getEntitiesOfClass(Player.class, pipe.getAOE(), LivingEntity::isAlive);
-        var pos = pipe.getOutputPos();
-        var pipePos = pipe.getPos();
-        var speed = new Vec3(pos.getX() - pipePos.getX(),
-                             pos.getY() - pipePos.getY(),
-                             pos.getZ() - pipePos.getZ()).scale(0.2);
-        var orbPos = VecHelper.getCenterOf(pos);
-        ExperienceFluid fluid = (ExperienceFluid) fluidStack.getFluid();
-        int amount = (int) fluidStack.getAmount();
-        if (players.isEmpty()) {
-            fluid.awardOrDrop(null, level, orbPos, speed, amount);
-        } else {
-            int partial = amount / players.size();
-            int left = amount % players.size();
-            players.forEach(player -> {
-                CeiAdvancements.A_SHOWER_EXPERIENCE.getTrigger().trigger((ServerPlayer) player);
-                fluid.awardOrDrop(player, level, orbPos, speed, partial);
-            });
-            if (left != 0) {
-                var lucky = players.get(level.random.nextInt(players.size()));
-                fluid.awardOrDrop(lucky, level, orbPos, speed, left);
-            }
-        }
-    }
+	public static void apply(OpenEndedPipe pipe, FluidStack fluidStack) {
+		if (!(pipe.getWorld() instanceof ServerLevel level))
+			return;
+
+		if (!(fluidStack.getFluid() instanceof ExperienceFluid fluid))
+			return;
+
+		BlockPos outputPos = pipe.getOutputPos();
+		BlockPos pipePos = pipe.getPos();
+
+		Vec3 orbPos = Vec3.atCenterOf(outputPos);
+		Vec3 speed = new Vec3(
+				outputPos.getX() - pipePos.getX(),
+				outputPos.getY() - pipePos.getY(),
+				outputPos.getZ() - pipePos.getZ()
+		).scale(0.2);
+
+		int amount = (int) fluidStack.getAmount();
+
+		AABB area = pipe.getAOE();
+		var players = level.getEntitiesOfClass(Player.class, area, LivingEntity::isAlive);
+
+		if (players.isEmpty()) {
+			fluid.awardOrDrop(null, level, orbPos, speed, amount);
+			return;
+		}
+
+		int perPlayer = amount / players.size();
+		int remainder = amount % players.size();
+
+		for (Player player : players) {
+			if (player instanceof ServerPlayer sp) {
+				CeiAdvancements.A_SHOWER_EXPERIENCE.getTrigger().trigger(sp);
+				fluid.awardOrDrop(sp, level, orbPos, speed, perPlayer);
+			}
+		}
+
+		if (remainder > 0) {
+			Player lucky = players.get(level.random.nextInt(players.size()));
+			fluid.awardOrDrop(lucky, level, orbPos, speed, remainder);
+		}
+	}
 }
