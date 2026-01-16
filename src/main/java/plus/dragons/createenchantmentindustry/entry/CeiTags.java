@@ -1,6 +1,6 @@
 package plus.dragons.createenchantmentindustry.entry;
 
-import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.LANG;
+import net.createmod.catnip.lang.Lang;
 
 import java.util.Locale;
 

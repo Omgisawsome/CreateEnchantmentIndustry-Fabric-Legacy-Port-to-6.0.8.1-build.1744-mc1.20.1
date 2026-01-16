@@ -1,21 +1,32 @@
 package plus.dragons.createenchantmentindustry.foundation.ponder;
 
-import com.simibubi.create.foundation.ponder.PonderTag;
+import com.simibubi.create.AllBlocks;
+import com.simibubi.create.AllItems;
+import com.tterrag.registrate.util.entry.RegistryEntry;
+import net.createmod.ponder.api.registration.PonderTagRegistrationHelper;
 import net.minecraft.resources.ResourceLocation;
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 import plus.dragons.createenchantmentindustry.entry.CeiBlocks;
+import plus.dragons.createenchantmentindustry.entry.CeiItems;
 
-public class CeiPonderTag extends PonderTag {
+public class CeiPonderTag {
+	public static final ResourceLocation EXPERIENCE = EnchantmentIndustry.genRL("experience");
 
-    public static final PonderTag EXPERIENCE = create("experience")
-            .defaultLang("Experience Related", "Items and Components related to experience")
-            .item(CeiBlocks.DISENCHANTER.get(), true, false).addToIndex();
+	public static void register(PonderTagRegistrationHelper<ResourceLocation> helper) {
+		helper.registerTag(EXPERIENCE).
+				addToIndex().
+				item(CeiBlocks.DISENCHANTER.get(), true, false).
+				title("Experience Related").
+				description("Items and Components related to experience").register();
 
-    public CeiPonderTag(ResourceLocation id) {
-        super(id);
-    }
-
-    private static PonderTag create(String id) {
-        return new PonderTag(EnchantmentIndustry.genRL(id));
-    }
+		PonderTagRegistrationHelper<RegistryEntry<?>> HELPER = helper.withKeyFunction(RegistryEntry::getId);
+		HELPER.addToTag(EXPERIENCE)
+				.add(CeiBlocks.DISENCHANTER)
+				.add(CeiBlocks.PRINTER)
+				.add(CeiItems.ENCHANTING_GUIDE)
+				.add(AllItems.EXP_NUGGET)
+				.add(CeiItems.HYPER_EXP_BOTTLE)
+				.add(AllBlocks.ITEM_DRAIN)
+				.add(AllBlocks.SPOUT);
+	}
 }
