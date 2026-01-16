@@ -13,7 +13,7 @@ public class CeiBlockPartials {
     private static PartialModel block(String path) {
         return new PartialModel(EnchantmentIndustry.genRL("block/" + path));
     }
-    
+
     public static void register() {}
-    
+
 }
