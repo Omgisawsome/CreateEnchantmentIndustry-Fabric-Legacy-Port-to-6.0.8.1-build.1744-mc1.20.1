@@ -3,14 +3,17 @@ package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.p
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
 import com.simibubi.create.foundation.blockEntity.renderer.SmartBlockEntityRenderer;
-import com.simibubi.create.foundation.fluid.FluidRenderer;
 
-// FIXED: FluidStack is in Porting Lib for this build
+// Porting Lib FluidStack
 import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 
-// FIXED: PartialModel and CachedBuffers are in Catnip
+// Flywheel / Catnip imports
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
 import net.createmod.catnip.render.CachedBuffers;
+import net.createmod.catnip.platform.CatnipServices;
+
+// Using Vanilla FluidState as you requested
+import net.minecraft.world.level.material.FluidState;
 
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -44,8 +47,25 @@ public class PrinterRenderer extends SmartBlockEntityRenderer<PrinterBlockEntity
 			ms.pushPose();
 			ms.translate(0, yOffset, 0);
 
-			// Render using the FluidStack directly
-			FluidRenderer.renderFluidBox(fluidStack, min, min - yOffset, min, max, min, max, buffer, ms, light, false);
+			// FIXED: Get the vanilla FluidState from the FluidStack
+			FluidState vanillaState = fluidStack.getFluid().defaultFluidState();
+
+			// We cast the service to its generic form to ensure it accepts the vanilla state
+			// if the Service definition is actually using the vanilla class.
+			CatnipServices.FLUID_RENDERER.renderFluidBox(
+					vanillaState,         // Arg 1: net.minecraft.world.level.material.FluidState
+					min,                  // 2: x1
+					min - yOffset,        // 3: y1
+					min,                  // 4: z1
+					max,                  // 5: x2
+					min,                  // 6: y2
+					max,                  // 7: z2
+					buffer,               // 8
+					ms,                   // 9
+					light,                // 10
+					false,                // 11
+					false                 // 12
+			);
 
 			ms.popPose();
 		}
