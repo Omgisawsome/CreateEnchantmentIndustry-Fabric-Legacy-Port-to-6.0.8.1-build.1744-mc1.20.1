@@ -10,7 +10,7 @@ import fuzs.forgeconfigapiport.api.config.v2.ModConfigEvents;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import com.simibubi.create.foundation.config.ConfigBase;
+import net.createmod.catnip.config.ConfigBase;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.config.ModConfig;

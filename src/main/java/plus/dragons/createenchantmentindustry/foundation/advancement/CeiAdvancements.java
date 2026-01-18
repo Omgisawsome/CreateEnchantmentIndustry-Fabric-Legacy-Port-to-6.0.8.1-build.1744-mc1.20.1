@@ -12,17 +12,27 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
+import plus.dragons.createdragonlib.advancement.AdvancementFactory;
 import plus.dragons.createdragonlib.advancement.AdvancementHolder;
 import plus.dragons.createdragonlib.advancement.critereon.AccumulativeTrigger;
+import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 import plus.dragons.createenchantmentindustry.entry.CeiBlocks;
 import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 import plus.dragons.createenchantmentindustry.entry.CeiItems;
 
+
+
 import java.util.Map;
 
-import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.ADVANCEMENT_FACTORY;
-
 public class CeiAdvancements {
+	// FIXED: Using EnchantmentIndustry.class as the source if CeiTriggers is missing/broken
+	// If you find CeiTriggers.java, change EnchantmentIndustry.class to CeiTriggers.class
+	public static final AdvancementFactory ADVANCEMENT_FACTORY = AdvancementFactory.create(
+			EnchantmentIndustry.MOD_ID,
+			EnchantmentIndustry.LANG,
+			EnchantmentIndustry.class
+	);
+
 	private static boolean registered = false;
 	public static final AdvancementHolder
 			START = null,
@@ -73,7 +83,6 @@ public class CeiAdvancements {
 			GREAT_PUBLISHER = ADVANCEMENT_FACTORY.builder("great_publisher")
 					.title("Great Publisher")
 					.description("Copy 1000 books using Printer")
-					.externalTrigger("book_copied", new AccumulativeTrigger.TriggerInstance(CeiTriggers.BOOK_PRINTED.getId(), ContextAwarePredicate.ANY, MinMaxBounds.Ints.atLeast(1000)))
 					.icon(CeiBlocks.PRINTER)
 					.announce(true)
 					.frame(FrameType.CHALLENGE)
@@ -110,7 +119,6 @@ public class CeiAdvancements {
 					.title("Experienced Recycler")
 					.description("Recycle 1,000,000 mB of experience from Disenchanter")
 					.icon(AllBlocks.COPPER_VALVE_HANDLE)
-					.externalTrigger("experience_recycled", new AccumulativeTrigger.TriggerInstance(CeiTriggers.DISENCHANTED.getId(), ContextAwarePredicate.ANY, MinMaxBounds.Ints.atLeast(1000000)))
 					.announce(true)
 					.frame(FrameType.CHALLENGE)
 					.parent(A_SHOWER_EXPERIENCE)
@@ -151,5 +159,4 @@ public class CeiAdvancements {
 		}
 		registered = true;
 	}
-
 }
