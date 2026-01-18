@@ -1,7 +1,7 @@
 package plus.dragons.createenchantmentindustry.entry;
 
 import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.Locale;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -32,9 +32,11 @@ public enum CeiRecipeTypes implements IRecipeTypeInfo {
 	private final RecipeType<?> type;
 
 	CeiRecipeTypes(ProcessingRecipeBuilder.ProcessingRecipeFactory<?> factory) {
-		this.id = EnchantmentIndustry.genRL(
-				EnchantmentIndustry.LANG.asId(name())
-		);
+		// FIXED: Manually convert enum name to snake_case id string
+		// This replaces the missing EnchantmentIndustry.LANG.asId()
+		String nameId = name().toLowerCase(Locale.ROOT);
+
+		this.id = EnchantmentIndustry.genRL(nameId);
 
 		this.serializer = Registry.register(
 				BuiltInRegistries.RECIPE_SERIALIZER,
