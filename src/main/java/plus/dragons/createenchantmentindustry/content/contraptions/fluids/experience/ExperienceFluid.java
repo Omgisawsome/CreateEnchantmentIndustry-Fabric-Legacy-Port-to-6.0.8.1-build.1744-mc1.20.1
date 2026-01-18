@@ -1,18 +1,28 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.fluids.experience;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
+
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Base Experience Fluid logic.
  * Create 6 / Fabric compatible.
  */
-public class ExperienceFluid {
+public class ExperienceFluid extends Fluid {
 
 	/** 81 units = 1 XP (matches vanilla orb math) */
 	public static final int UNIT_PER_MB = 81;
@@ -25,6 +35,61 @@ public class ExperienceFluid {
 
 	public ExperienceFluid() {
 		this(1);
+	}
+
+	@Override
+	public Item getBucket() {
+		return null;
+	}
+
+	@Override
+	protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid fluid, Direction direction) {
+		return false;
+	}
+
+	@Override
+	protected Vec3 getFlow(BlockGetter blockReader, BlockPos pos, FluidState fluidState) {
+		return null;
+	}
+
+	@Override
+	public int getTickDelay(LevelReader level) {
+		return 0;
+	}
+
+	@Override
+	protected float getExplosionResistance() {
+		return 0;
+	}
+
+	@Override
+	public float getHeight(FluidState state, BlockGetter level, BlockPos pos) {
+		return 0;
+	}
+
+	@Override
+	public float getOwnHeight(FluidState state) {
+		return 0;
+	}
+
+	@Override
+	protected BlockState createLegacyBlock(FluidState state) {
+		return null;
+	}
+
+	@Override
+	public boolean isSource(FluidState state) {
+		return false;
+	}
+
+	@Override
+	public int getAmount(FluidState state) {
+		return 0;
+	}
+
+	@Override
+	public VoxelShape getShape(FluidState state, BlockGetter level, BlockPos pos) {
+		return null;
 	}
 
 	/* ------------------------------------------------------------
