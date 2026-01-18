@@ -67,7 +67,7 @@ public class ExperienceFluid {
 		drop(level, pos, xp);
 	}
 
-	protected void drop(ServerLevel level, Vec3 pos, int xp) {
+	public void drop(ServerLevel level, Vec3 pos, int xp) {
 		while (xp > 0) {
 			int orbValue = ExperienceOrb.getExperienceValue(xp);
 			xp -= orbValue;
