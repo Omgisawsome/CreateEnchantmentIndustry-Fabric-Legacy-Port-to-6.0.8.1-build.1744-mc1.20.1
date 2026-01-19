@@ -83,6 +83,7 @@ public class RecipeCategoryBuilder<T extends Recipe<?>> {
 		);
 	}
 
+	@SuppressWarnings("unchecked")
 	public RecipeCategoryBuilder<T> addAllRecipesIf(
 			Predicate<Recipe<?>> pred,
 			Function<Recipe<?>, T> converter
@@ -96,24 +97,29 @@ public class RecipeCategoryBuilder<T extends Recipe<?>> {
 		);
 	}
 
+	@SuppressWarnings("unchecked")
 	public <O extends Recipe<?>> RecipeCategoryBuilder<T> addTransformedRecipes(
 			Supplier<RecipeType<O>> recipeType,
 			Function<O, T> converter
 	) {
 		return addRecipeListConsumer(recipes ->
 				CreateJEI.consumeTypedRecipes(
-						recipe -> recipes.add(converter.apply(recipe)),
+						// FIXED: Cast to O to resolve capture conversion mismatch
+						recipe -> recipes.add(converter.apply((O) recipe)),
 						recipeType.get()
 				)
 		);
 	}
 
+	@SuppressWarnings("unchecked")
 	public RecipeCategoryBuilder<T> addTypedRecipes(Supplier<RecipeType<? extends T>> recipeType) {
 		return addRecipeListConsumer(recipes ->
-				CreateJEI.consumeTypedRecipes(recipes::add, recipeType.get())
+				// FIXED: Use lambda with explicit cast (T) instead of method reference
+				CreateJEI.consumeTypedRecipes(recipe -> recipes.add((T) recipe), recipeType.get())
 		);
 	}
 
+	@SuppressWarnings("unchecked")
 	public RecipeCategoryBuilder<T> addTypedRecipesIf(
 			Supplier<RecipeType<? extends T>> recipeType,
 			Predicate<Recipe<?>> pred
@@ -121,7 +127,8 @@ public class RecipeCategoryBuilder<T extends Recipe<?>> {
 		return addRecipeListConsumer(recipes ->
 				CreateJEI.consumeTypedRecipes(recipe -> {
 					if (pred.test(recipe)) {
-						recipes.add(recipe);
+						// FIXED: Cast to T to resolve capture conversion mismatch
+						recipes.add((T) recipe);
 					}
 				}, recipeType.get())
 		);
