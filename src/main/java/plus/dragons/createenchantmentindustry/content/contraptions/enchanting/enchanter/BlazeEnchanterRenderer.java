@@ -1,7 +1,5 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter;
 
-import static plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter.BlazeEnchanterBlockEntity.ENCHANTING_TIME;
-
 import java.util.Set;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -80,6 +78,10 @@ public class BlazeEnchanterRenderer
 
 		var transported = be.heldItem;
 		Direction insertedFrom = transported.insertedFrom;
+
+		// Handle null check for insertedFrom which can happen during belt transfers
+		if (insertedFrom == null) insertedFrom = Direction.UP;
+
 		boolean horizontal = insertedFrom.getAxis().isHorizontal();
 
 		ps.pushPose();
@@ -126,13 +128,15 @@ public class BlazeEnchanterRenderer
 
 		ps.translate(0.5, 0.25, 0.5);
 
-		float time = be.getLevel().getGameTime() + partialTicks;
+		float time = (float)be.getLevel().getGameTime() + partialTicks;
 		ps.translate(0.0, 0.1f + Mth.sin(time * 0.1f) * 0.01f, 0.0);
 
-		float horizontalAngle = be.headAngle.getValue(partialTicks);
-		ps.mulPose(Axis.YP.rotation(horizontalAngle + PI / 2));
+		// FIX: Use Mth.lerp because headAngle is now a standard float, not a LerpedFloat
+		float horizontalAngle = Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle);
+		ps.mulPose(Axis.YP.rotation(-horizontalAngle + PI / 2));
 		ps.mulPose(Axis.ZP.rotationDegrees(80.0f));
 
+		// Uses the oFlip and flip fields from the BE
 		float flip = Mth.lerp(partialTicks, be.oFlip, be.flip);
 		float page0 = Mth.frac(flip + 0.25f) * 1.6f - 0.3f;
 		float page1 = Mth.frac(flip + 0.75f) * 1.6f - 0.3f;
@@ -155,8 +159,6 @@ public class BlazeEnchanterRenderer
 
 		ps.popPose();
 	}
-
-	/* --------------------------- TEXTURE STITCH --------------------------- */
 
 	public static void loadTexture(ResourceLocation atlas, Set<ResourceLocation> sprites) {
 		if (atlas.equals(InventoryMenu.BLOCK_ATLAS)) {

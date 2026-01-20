@@ -30,15 +30,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -63,10 +62,21 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	public boolean goggles;
 
+	// We replaced LerpedFloat with simple floats to avoid import errors
+	public float headAngle;
+	public float oHeadAngle;
+	public float flip;
+	public float oFlip;
+	public float flipT;
+	public float flipA;
+	public float open;
+	public float oOpen;
+
+	private static final Random bookRandom = new Random();
+	protected final Random random = new Random();
+
 	protected final Map<Direction, LazyOptional<EnchantingItemHandler>> itemHandlers =
 			new IdentityHashMap<>();
-
-	protected final Random random = new Random();
 
 	public BlazeEnchanterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
 		super(type, pos, state);
@@ -97,8 +107,37 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	public void tick() {
 		super.tick();
 
-		if (level == null || level.isClientSide)
+		if (level == null)
 			return;
+
+		if (level.isClientSide) {
+			oFlip = flip;
+			oOpen = open;
+			oHeadAngle = headAngle;
+			Player player = level.getNearestPlayer(worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D, worldPosition.getZ() + 0.5D, 3.0D, false);
+
+			if (player != null) {
+				double d0 = player.getX() - (worldPosition.getX() + 0.5D);
+				double d1 = player.getZ() - (worldPosition.getZ() + 0.5D);
+				float targetAngle = (float) Mth.atan2(d1, d0);
+				headAngle += (targetAngle - headAngle) * 0.1f;
+			}
+
+			while (flip >= (float) Math.PI) flip -= ((float) Math.PI * 2F);
+			while (flip < -(float) Math.PI) flip += ((float) Math.PI * 2F);
+
+			float f1 = flipT - flip;
+			while (f1 >= (float) Math.PI) f1 -= ((float) Math.PI * 2F);
+			while (f1 < -(float) Math.PI) f1 += ((float) Math.PI * 2F);
+
+			flip += f1 * 0.4F;
+			open = Mth.clamp(open, 0.0F, 1.0F);
+
+			if (bookRandom.nextInt(40) == 0) {
+				flipA += (float) (bookRandom.nextInt(4) - bookRandom.nextInt(4));
+			}
+			return;
+		}
 
 		if (heldItem == null) {
 			processingTicks = 0;
@@ -107,18 +146,13 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 		if (processingTicks > 0) {
 			processingTicks--;
-			if (processingTicks == 0) {
-				continueProcessing();
-			}
+			if (processingTicks == 0) continueProcessing();
 			return;
 		}
 
 		heldItem.beltPosition += 0.125f;
-
 		if (heldItem.beltPosition >= 0.5f) {
-			var entry = Enchanting.getValidEnchantment(
-					heldItem.stack, targetItem, hyper());
-
+			var entry = Enchanting.getValidEnchantment(heldItem.stack, targetItem, hyper());
 			if (entry != null) {
 				processingTicks = ENCHANTING_TIME;
 				setChanged();
@@ -127,27 +161,17 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	}
 
 	protected boolean continueProcessing() {
-		var entry = Enchanting.getValidEnchantment(
-				heldItem.stack, targetItem, hyper());
+		var entry = Enchanting.getValidEnchantment(heldItem.stack, targetItem, hyper());
+		if (entry == null) return false;
 
-		if (entry == null)
-			return false;
-
-		// FIX: Use the specific Pair type defined in the Enchanting class
 		Enchanting.Pair<Enchantment, Integer> pair = Enchanting.Pair.of(entry.getFirst(), entry.getSecond());
 		Enchanting.enchantItem(heldItem.stack, pair);
 
-		FluidStack cost = new FluidStack(
-				hyper()
-						? CeiFluids.HYPER_EXPERIENCE.get().getSource()
-						: CeiFluids.EXPERIENCE.get().getSource(),
-				(long) Enchanting.getExperienceConsumption(
-						entry.getFirst(), entry.getSecond())
-		);
+		FluidStack cost = new FluidStack(hyper() ? CeiFluids.HYPER_EXPERIENCE.get().getSource() : CeiFluids.EXPERIENCE.get().getSource(),
+				(long) Enchanting.getExperienceConsumption(entry.getFirst(), entry.getSecond()));
 
 		try (Transaction t = TransferUtil.getTransaction()) {
-			internalTank.getPrimaryHandler().extract(
-					cost.getType(), cost.getAmount(), t);
+			internalTank.getPrimaryHandler().extract(cost.getType(), cost.getAmount(), t);
 			t.commit();
 		}
 
@@ -156,48 +180,32 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		return true;
 	}
 
-	protected ItemStack tryInsertingFromSide(
-			TransportedItemStack stack, Direction side, boolean simulate) {
-
-		if (heldItem != null)
-			return stack.stack;
-
+	protected ItemStack tryInsertingFromSide(TransportedItemStack stack, Direction side, boolean simulate) {
+		if (heldItem != null) return stack.stack;
 		ItemStack inserted = stack.stack.copy();
 		inserted.setCount(1);
-
 		if (!simulate) {
 			heldItem = stack.copy();
 			heldItem.stack = inserted;
 			heldItem.insertedFrom = side;
 			setChanged();
 		}
-
-		return ItemHandlerHelper.copyStackWithSize(
-				stack.stack, stack.stack.getCount() - 1);
+		return ItemHandlerHelper.copyStackWithSize(stack.stack, stack.stack.getCount() - 1);
 	}
 
 	public boolean hyper() {
-		return CeiFluids.HYPER_EXPERIENCE.is(
-				internalTank.getPrimaryHandler().getFluid().getFluid());
+		return CeiFluids.HYPER_EXPERIENCE.is(internalTank.getPrimaryHandler().getFluid().getFluid());
 	}
 
 	@Override
 	public void destroy() {
 		super.destroy();
-
 		if (level instanceof ServerLevel server) {
 			if (heldItem != null)
-				Containers.dropItemStack(level,
-						worldPosition.getX(),
-						worldPosition.getY(),
-						worldPosition.getZ(),
-						heldItem.stack);
-
+				Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), heldItem.stack);
 			var fluid = internalTank.getPrimaryHandler().getFluid();
 			if (fluid.getFluid() instanceof ExperienceFluid exp)
-				exp.drop(server,
-						Vec3.atCenterOf(worldPosition),
-						(int) fluid.getAmount());
+				exp.drop(server, Vec3.atCenterOf(worldPosition), (int) fluid.getAmount());
 		}
 	}
 
@@ -207,8 +215,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		tag.putInt("Processing", processingTicks);
 		tag.put("Target", NBTSerializer.serializeNBT(targetItem));
 		tag.putBoolean("Goggles", goggles);
-		if (heldItem != null)
-			tag.put("Held", heldItem.serializeNBT());
+		if (heldItem != null) tag.put("Held", heldItem.serializeNBT());
 	}
 
 	@Override
@@ -217,16 +224,12 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		processingTicks = tag.getInt("Processing");
 		targetItem = ItemStack.of(tag.getCompound("Target"));
 		goggles = tag.getBoolean("Goggles");
-		heldItem = tag.contains("Held")
-				? TransportedItemStack.read(tag.getCompound("Held"))
-				: null;
+		heldItem = tag.contains("Held") ? TransportedItemStack.read(tag.getCompound("Held")) : null;
 	}
 
 	@Override
 	public @Nullable Storage<ItemVariant> getItemStorage(Direction side) {
-		return side != null && side.getAxis().isHorizontal()
-				? itemHandlers.get(side).getValueUnsafer()
-				: null;
+		return side != null && side.getAxis().isHorizontal() ? itemHandlers.get(side).getValueUnsafer() : null;
 	}
 
 	@Override
@@ -235,12 +238,8 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	}
 
 	@Override
-	public AbstractContainerMenu createMenu(
-			int id, Inventory inv, Player player) {
-
-		return new EnchantingGuideMenu(
-				CeiContainerTypes.ENCHANTING_GUIDE_FOR_BLAZE.get(),
-				id, inv, targetItem, worldPosition);
+	public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
+		return new EnchantingGuideMenu(CeiContainerTypes.ENCHANTING_GUIDE_FOR_BLAZE.get(), id, inv, targetItem, worldPosition);
 	}
 
 	@Override
@@ -250,7 +249,6 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	@Override
 	public ItemRequirement getRequiredItems(BlockState state) {
-		return new ItemRequirement(
-				ItemRequirement.ItemUseType.CONSUME, targetItem);
+		return new ItemRequirement(ItemRequirement.ItemUseType.CONSUME, targetItem);
 	}
 }
