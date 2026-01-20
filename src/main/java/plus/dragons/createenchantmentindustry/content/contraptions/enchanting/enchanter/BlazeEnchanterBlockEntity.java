@@ -61,6 +61,8 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	protected ItemStack targetItem = new ItemStack(CeiItems.ENCHANTING_GUIDE.get());
 	protected int processingTicks;
 
+	public boolean goggles;
+
 	protected final Map<Direction, LazyOptional<EnchantingItemHandler>> itemHandlers =
 			new IdentityHashMap<>();
 
@@ -72,6 +74,10 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		for (Direction d : Direction.Plane.HORIZONTAL) {
 			itemHandlers.put(d, LazyOptional.of(() -> new EnchantingItemHandler(this, d)));
 		}
+	}
+
+	public ItemStack getHeldItemStack() {
+		return heldItem == null ? ItemStack.EMPTY : heldItem.stack;
 	}
 
 	@Override
@@ -101,7 +107,9 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 		if (processingTicks > 0) {
 			processingTicks--;
-			continueProcessing();
+			if (processingTicks == 0) {
+				continueProcessing();
+			}
 			return;
 		}
 
@@ -119,16 +127,15 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	}
 
 	protected boolean continueProcessing() {
-		if (processingTicks > 0)
-			return true;
-
 		var entry = Enchanting.getValidEnchantment(
 				heldItem.stack, targetItem, hyper());
 
 		if (entry == null)
 			return false;
 
-		Enchanting.enchantItem(heldItem.stack, entry);
+		// FIX: Use the specific Pair type defined in the Enchanting class
+		Enchanting.Pair<Enchantment, Integer> pair = Enchanting.Pair.of(entry.getFirst(), entry.getSecond());
+		Enchanting.enchantItem(heldItem.stack, pair);
 
 		FluidStack cost = new FluidStack(
 				hyper()
@@ -199,6 +206,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		super.write(tag, clientPacket);
 		tag.putInt("Processing", processingTicks);
 		tag.put("Target", NBTSerializer.serializeNBT(targetItem));
+		tag.putBoolean("Goggles", goggles);
 		if (heldItem != null)
 			tag.put("Held", heldItem.serializeNBT());
 	}
@@ -208,6 +216,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		super.read(tag, clientPacket);
 		processingTicks = tag.getInt("Processing");
 		targetItem = ItemStack.of(tag.getCompound("Target"));
+		goggles = tag.getBoolean("Goggles");
 		heldItem = tag.contains("Held")
 				? TransportedItemStack.read(tag.getCompound("Held"))
 				: null;

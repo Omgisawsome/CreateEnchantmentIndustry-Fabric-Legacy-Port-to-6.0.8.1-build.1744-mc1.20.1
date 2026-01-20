@@ -39,8 +39,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.pathfinder.PathComputationType;
-import net.minecraft.world.level.storage.loot.LootContext;
-import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -50,178 +48,184 @@ import plus.dragons.createenchantmentindustry.entry.CeiItems;
 @SuppressWarnings("deprecation")
 public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements IWrenchable, IBE<BlazeEnchanterBlockEntity> {
 
-    public static final EnumProperty<HeatLevel> HEAT_LEVEL = EnumProperty.create("blaze", HeatLevel.class);
-    public BlazeEnchanterBlock(Properties pProperties) {
-        super(pProperties);
-        registerDefaultState(defaultBlockState().setValue(HEAT_LEVEL, HeatLevel.SMOULDERING));
-    }
+	public static final EnumProperty<HeatLevel> HEAT_LEVEL = EnumProperty.create("blaze", HeatLevel.class);
+	public BlazeEnchanterBlock(Properties pProperties) {
+		super(pProperties);
+		registerDefaultState(defaultBlockState().setValue(HEAT_LEVEL, HeatLevel.SMOULDERING));
+	}
 
-    @Override
-    public Class<BlazeEnchanterBlockEntity> getBlockEntityClass() {
-        return BlazeEnchanterBlockEntity.class;
-    }
+	@Override
+	public Class<BlazeEnchanterBlockEntity> getBlockEntityClass() {
+		return BlazeEnchanterBlockEntity.class;
+	}
 
-    @Override
-    public BlockEntityType<? extends BlazeEnchanterBlockEntity> getBlockEntityType() {
-        return CeiBlockEntities.BLAZE_ENCHANTER.get();
-    }
+	@Override
+	public BlockEntityType<? extends BlazeEnchanterBlockEntity> getBlockEntityType() {
+		return CeiBlockEntities.BLAZE_ENCHANTER.get();
+	}
 
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        super.createBlockStateDefinition(builder);
-        builder.add(HEAT_LEVEL, FACING);
-    }
+	@Override
+	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		super.createBlockStateDefinition(builder);
+		builder.add(HEAT_LEVEL, FACING);
+	}
 
-    @Override
-    public Item asItem() {
-        return AllBlocks.BLAZE_BURNER.get().asItem();
-    }
+	@Override
+	public Item asItem() {
+		return AllBlocks.BLAZE_BURNER.get().asItem();
+	}
 
-    @Override
-    public VoxelShape getShape(BlockState pState, BlockGetter pLevel, BlockPos blockPos, CollisionContext pContext) {
-        return AllShapes.HEATER_BLOCK_SHAPE;
-    }
+	@Override
+	public VoxelShape getShape(BlockState pState, BlockGetter pLevel, BlockPos blockPos, CollisionContext pContext) {
+		return AllShapes.HEATER_BLOCK_SHAPE;
+	}
 
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        IBE.onRemove(state,level,pos,newState);
-    }
+	@Override
+	public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+		IBE.onRemove(state,level,pos,newState);
+	}
 
-    @Override
-    public InteractionResult use(BlockState state, Level worldIn, BlockPos pos, Player player, InteractionHand handIn, BlockHitResult hit) {
-        ItemStack heldItem;
+	@Override
+	public InteractionResult use(BlockState state, Level worldIn, BlockPos pos, Player player, InteractionHand handIn, BlockHitResult hit) {
+		ItemStack heldItem;
 
-        if(handIn==InteractionHand.OFF_HAND)
-            return InteractionResult.PASS;
+		if(handIn==InteractionHand.OFF_HAND)
+			return InteractionResult.PASS;
 
-        if (player.isCreative()) {
-            heldItem = player.getItemInHand(handIn).copy();
-        } else {
-            heldItem = player.getItemInHand(handIn);
-        }
+		if (player.isCreative()) {
+			heldItem = player.getItemInHand(handIn).copy();
+		} else {
+			heldItem = player.getItemInHand(handIn);
+		}
 
-        if (player.isShiftKeyDown() && heldItem.isEmpty()){
-            if(!player.level().isClientSide()){
-                if(player.level().getBlockEntity(pos) instanceof BlazeEnchanterBlockEntity blazeEnchanter){
-                    withBlockEntityDo(player.level(), pos,
-                            toolbox -> NetworkHooks.openScreen((ServerPlayer) player,
-                                    blazeEnchanter, buf -> {
-                                        buf.writeItem(blazeEnchanter.targetItem);
-                                        buf.writeBoolean(false);
-                                        buf.writeBlockPos(pos);
-                                    }));
-                }
-            }
-            return InteractionResult.SUCCESS;
-        }
-        if (!heldItem.isEmpty()){
-            return onBlockEntityUse(worldIn, pos, te -> {
-                if(heldItem.is(CeiItems.ENCHANTING_GUIDE.get())){
-                    if (!worldIn.isClientSide) {
-                        var target = te.targetItem.copy();
-                        te.targetItem = heldItem;
-                        if(!player.getAbilities().instabuild)
-                            player.setItemInHand(handIn, target);
-                        te.notifyUpdate();
-                    }
-                    return InteractionResult.SUCCESS;
-                } else if(Enchanting.getValidEnchantment(heldItem, te.targetItem, te.hyper()) != null) {
-                    ItemStack heldItemStack = te.getHeldItemStack();
-                    if (heldItemStack.isEmpty()) {
-                        if (!worldIn.isClientSide) {
-                            te.heldItem = new TransportedItemStack(heldItem);
-                            if(!player.getAbilities().instabuild)
-                                player.setItemInHand(handIn, ItemStack.EMPTY);
-                            te.notifyUpdate();
-                        }
-                        return InteractionResult.SUCCESS;
-                    }
-                    return InteractionResult.FAIL;
-                } else if (AllItems.GOGGLES.isIn(heldItem)) {
-                    if (te.goggles)
-                        return InteractionResult.PASS;
-                    te.goggles = true;
-                    te.notifyUpdate();
-                    return InteractionResult.SUCCESS;
-                }
-                else return InteractionResult.PASS;
-            });
-        } else {
-            return onBlockEntityUse(worldIn, pos, te -> {
-                ItemStack heldItemStack = te.getHeldItemStack();
-                if (!heldItemStack.isEmpty()) {
-                    if (!worldIn.isClientSide) {
-                        te.heldItem = null;
-                        player.setItemInHand(handIn, heldItemStack);
-                        te.notifyUpdate();
-                    }
-                    return InteractionResult.SUCCESS;
-                } if (!te.goggles)
-                    return InteractionResult.PASS;
-                te.goggles = false;
-                te.notifyUpdate();
-                return InteractionResult.SUCCESS;
-            });
-        }
-    }
+		if (player.isShiftKeyDown() && heldItem.isEmpty()){
+			if(!player.level().isClientSide()){
+				if(player.level().getBlockEntity(pos) instanceof BlazeEnchanterBlockEntity blazeEnchanter){
+					withBlockEntityDo(player.level(), pos,
+							toolbox -> NetworkHooks.openScreen((ServerPlayer) player,
+									blazeEnchanter, buf -> {
+										buf.writeItem(blazeEnchanter.targetItem);
+										buf.writeBoolean(false);
+										buf.writeBlockPos(pos);
+									}));
+				}
+			}
+			return InteractionResult.SUCCESS;
+		}
+		if (!heldItem.isEmpty()){
+			return onBlockEntityUse(worldIn, pos, te -> {
+				if(heldItem.is(CeiItems.ENCHANTING_GUIDE.get())){
+					if (!worldIn.isClientSide) {
+						var target = te.targetItem.copy();
+						te.targetItem = heldItem;
+						if(!player.getAbilities().instabuild)
+							player.setItemInHand(handIn, target);
+						te.notifyUpdate();
+					}
+					return InteractionResult.SUCCESS;
+				} else if(Enchanting.getValidEnchantment(heldItem, te.targetItem, te.hyper()) != null) {
+					// Logic enabled: getHeldItemStack now exists in BlockEntity
+					ItemStack heldItemStack = te.getHeldItemStack();
+					if (heldItemStack.isEmpty()) {
+						if (!worldIn.isClientSide) {
+							te.heldItem = new TransportedItemStack(heldItem);
+							if(!player.getAbilities().instabuild)
+								player.setItemInHand(handIn, ItemStack.EMPTY);
+							te.notifyUpdate();
+						}
+						return InteractionResult.SUCCESS;
+					}
+					return InteractionResult.FAIL;
+				} else if (AllItems.GOGGLES.isIn(heldItem)) {
+					// Logic enabled: goggles field now exists in BlockEntity
+					if (te.goggles)
+						return InteractionResult.PASS;
+					te.goggles = true;
+					te.notifyUpdate();
+					return InteractionResult.SUCCESS;
+				}
+				else return InteractionResult.PASS;
+			});
+		} else {
+			return onBlockEntityUse(worldIn, pos, te -> {
+				// Logic enabled: getHeldItemStack now exists in BlockEntity
+				ItemStack heldItemStack = te.getHeldItemStack();
+				if (!heldItemStack.isEmpty()) {
+					if (!worldIn.isClientSide) {
+						te.heldItem = null;
+						player.setItemInHand(handIn, heldItemStack);
+						te.notifyUpdate();
+					}
+					return InteractionResult.SUCCESS;
+				}
 
-    @Override
-    public InteractionResult onSneakWrenched(BlockState state, UseOnContext context) {
-        Level world = context.getLevel();
-        BlockPos pos = context.getClickedPos();
-        Player player = context.getPlayer();
-        if (world instanceof ServerLevel) {
-            if (player != null)
-                player.level().setBlockAndUpdate(pos, AllBlocks.BLAZE_BURNER.getDefaultState()
-                        .setValue(BlazeBurnerBlock.FACING, state.getValue(FACING))
-                        .setValue(BlazeBurnerBlock.HEAT_LEVEL, BlazeBurnerBlock.HeatLevel.SMOULDERING));
-        }
-        return InteractionResult.SUCCESS;
-    }
+				// Logic enabled: goggles field now exists in BlockEntity
+				if (!te.goggles)
+					return InteractionResult.PASS;
+				te.goggles = false;
+				te.notifyUpdate();
+				return InteractionResult.SUCCESS;
+			});
+		}
+	}
 
-
-    @Override
-    public void setPlacedBy(Level pLevel, BlockPos pPos, BlockState pState, @Nullable LivingEntity pPlacer, ItemStack pStack) {
-        super.setPlacedBy(pLevel, pPos, pState, pPlacer, pStack);
-        AdvancementBehaviour.setPlacedBy(pLevel, pPos, pPlacer);
-    }
-
-    @Override
-    public ItemStack getCloneItemStack(BlockGetter pLevel, BlockPos pPos, BlockState pState) {
-        return new ItemStack(AllBlocks.BLAZE_BURNER.get());
-    }
-
-    @Override
-    public boolean hasAnalogOutputSignal(BlockState state) {
-        return true;
-    }
+	@Override
+	public InteractionResult onSneakWrenched(BlockState state, UseOnContext context) {
+		Level world = context.getLevel();
+		BlockPos pos = context.getClickedPos();
+		Player player = context.getPlayer();
+		if (world instanceof ServerLevel) {
+			if (player != null)
+				player.level().setBlockAndUpdate(pos, AllBlocks.BLAZE_BURNER.getDefaultState()
+						.setValue(BlazeBurnerBlock.FACING, state.getValue(FACING))
+						.setValue(BlazeBurnerBlock.HEAT_LEVEL, BlazeBurnerBlock.HeatLevel.SMOULDERING));
+		}
+		return InteractionResult.SUCCESS;
+	}
 
 
-    @Override
+	@Override
+	public void setPlacedBy(Level pLevel, BlockPos pPos, BlockState pState, @Nullable LivingEntity pPlacer, ItemStack pStack) {
+		super.setPlacedBy(pLevel, pPos, pState, pPlacer, pStack);
+		AdvancementBehaviour.setPlacedBy(pLevel, pPos, pPlacer);
+	}
+
+	@Override
+	public ItemStack getCloneItemStack(BlockGetter pLevel, BlockPos pPos, BlockState pState) {
+		return new ItemStack(AllBlocks.BLAZE_BURNER.get());
+	}
+
+	@Override
+	public boolean hasAnalogOutputSignal(BlockState state) {
+		return true;
+	}
+
+
+	@Override
 	public List<ItemStack> getDrops(BlockState pState, LootParams.Builder pParams) {
-        var ret = new ArrayList<ItemStack>();
-        ret.add(new ItemStack(AllBlocks.BLAZE_BURNER.get()));
-        return ret;
-    }
+		var ret = new ArrayList<ItemStack>();
+		ret.add(new ItemStack(AllBlocks.BLAZE_BURNER.get()));
+		return ret;
+	}
 
-    @Override
-    public int getAnalogOutputSignal(BlockState blockState, Level worldIn, BlockPos pos) {
-        return ComparatorUtil.levelOfSmartFluidTank(worldIn, pos);
-    }
+	@Override
+	public int getAnalogOutputSignal(BlockState blockState, Level worldIn, BlockPos pos) {
+		return ComparatorUtil.levelOfSmartFluidTank(worldIn, pos);
+	}
 
-    @Override
-    public boolean isPathfindable(BlockState state, BlockGetter reader, BlockPos pos, PathComputationType type) {
-        return false;
-    }
+	@Override
+	public boolean isPathfindable(BlockState state, BlockGetter reader, BlockPos pos, PathComputationType type) {
+		return false;
+	}
 
-    public static int getLight(BlockState state) {
-        HeatLevel level = state.getValue(HEAT_LEVEL);
-        return switch (level) {
-            case SEETHING -> 15;
-            case KINDLED -> 11;
-            case SMOULDERING -> 7;
-        };
-    }
+	public static int getLight(BlockState state) {
+		HeatLevel level = state.getValue(HEAT_LEVEL);
+		return switch (level) {
+			case SEETHING -> 15;
+			case KINDLED -> 11;
+			case SMOULDERING -> 7;
+		};
+	}
 
 	public enum HeatLevel implements StringRepresentable {
 		SMOULDERING, KINDLED, SEETHING;
@@ -241,6 +245,6 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 		@Override
 		public String getSerializedName() {
 			return name().toLowerCase();
-        }
-    }
+		}
+	}
 }
