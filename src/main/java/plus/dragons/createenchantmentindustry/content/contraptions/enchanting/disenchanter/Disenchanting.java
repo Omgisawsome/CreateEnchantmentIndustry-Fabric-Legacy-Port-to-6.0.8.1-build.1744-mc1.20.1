@@ -15,7 +15,7 @@ import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.util.Mth;
-import net.minecraft.world.Container; // Added import
+import net.minecraft.world.Container;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -23,6 +23,8 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 
+import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.DisenchanterBlockEntity;
+import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.DisenchantRecipe;
 import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 import plus.dragons.createenchantmentindustry.entry.CeiRecipeTypes;
 
@@ -42,7 +44,6 @@ public class Disenchanting {
 
 		WRAPPER.setItem(0, itemStack);
 
-		// FIX: Changed ItemStackHandlerContainer to Container
 		return CeiRecipeTypes.DISENCHANTING
 				.<Container, DisenchantRecipe>find(WRAPPER, level)
 				.map(recipe -> {
@@ -106,7 +107,6 @@ public class Disenchanting {
 		}
 
 		WRAPPER.setItem(0, itemStack);
-		// FIX: Changed ItemStackHandlerContainer to Container
 		var recipe =
 				CeiRecipeTypes.DISENCHANTING
 						.<Container, DisenchantRecipe>find(WRAPPER, level)
