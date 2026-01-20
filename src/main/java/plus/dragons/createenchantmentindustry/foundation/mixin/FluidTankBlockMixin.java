@@ -20,50 +20,52 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import plus.dragons.createenchantmentindustry.content.contraptions.fluids.experience.ExperienceFluid;
 
-@Mixin(value = FluidTankBlock.class, remap = false)
+// Set remap = true for production/MultiMC compatibility
+@Mixin(value = FluidTankBlock.class, remap = true)
 public abstract class FluidTankBlockMixin extends Block implements IBE<FluidTankBlockEntity>, IWrenchable {
 	public FluidTankBlockMixin(Properties pProperties) {
 		super(pProperties);
 	}
 
-	@Inject(method = "onRemove", at = @At(value = "INVOKE",
-			target = "Lnet/minecraft/world/level/Level;removeBlockEntity(Lnet/minecraft/core/BlockPos;)V"),
-			cancellable = true)
-	private void injected(BlockState state, Level level, BlockPos pos, BlockState newState, boolean var4, CallbackInfo ci) {
-		if (!(level instanceof ServerLevel serverLevel))
+	/**
+	 * Updated for Create 6.0.8.1 (1.20.1)
+	 * We inject at HEAD to capture the tank data before the BlockEntity is invalidated.
+	 */
+	@Inject(method = "onRemove",
+			at = @At("HEAD"),
+			cancellable = false)
+	private void ce_onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving, CallbackInfo ci) {
+		// Exit early if it's a client world or if the block isn't actually being replaced
+		if (!(level instanceof ServerLevel serverLevel) || state.is(newState.getBlock()))
 			return;
 
 		BlockEntity be = level.getBlockEntity(pos);
 		if (!(be instanceof FluidTankBlockEntity tankBE) || be instanceof CreativeFluidTankBlockEntity)
 			return;
 
+		// Create 6.0 multiblock logic: ensure we get the correct controller for experience drops
 		FluidTankBlockEntity controllerBE = tankBE.getControllerBE();
 		if (controllerBE == null) return;
 
 		var fluidStack = controllerBE.getTankInventory().getFluid();
-		if (fluidStack.getFluid() instanceof ExperienceFluid expFluid) {
-			// Get backup of amount before we start removing logic
+
+		// Check if the fluid is liquid experience
+		if (fluidStack.getFluid() instanceof ExperienceFluid) {
 			long amount = fluidStack.getAmount();
-			int maxSize = controllerBE.getTotalTankSize();
-
-			// FABRIC FIX: Instead of manual splitMulti (which is internal/different on Fabric),
-			// we let the original code proceed after we handle our drop logic,
-			// or we call the removal logic specifically.
-
+			int totalTanks = controllerBE.getTotalTankSize();
 			Vec3 center = Vec3.atCenterOf(pos);
 
-			if (maxSize <= 1) {
+			if (totalTanks <= 1) {
+				// Drop the entire contents if it's a single tank
 				ExperienceFluid.drop(serverLevel, center, (int) amount);
 			} else {
-				// Fabric uses different capacity multipliers.
-				// We drop the proportional amount for one block.
+				// Create 6.0 uses a capacity multiplier for multiblock tanks
 				long capacityPerBlock = FluidTankBlockEntity.getCapacityMultiplier();
+
+				// Calculate how much should drop from this specific segment
 				long toDrop = Math.min(amount, capacityPerBlock);
 				ExperienceFluid.drop(serverLevel, center, (int) toDrop);
 			}
-
-			// We don't cancel here anymore to let Create's native multiblock
-			// destruction logic (which is complex on Fabric) run its course.
 		}
 	}
 }

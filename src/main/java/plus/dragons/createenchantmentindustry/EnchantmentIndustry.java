@@ -15,9 +15,9 @@ public class EnchantmentIndustry implements ModInitializer {
 	public static final String MOD_ID = "create_enchantment_industry";
 	public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
-	// CreateRegistrate automatically handles AbstractRegistrate if the dependency is in build.gradle
 	public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(MOD_ID);
 
+	// Fabric 1.20.1 uses 81 units per mB
 	public static final int UNIT_PER_MB = 81;
 
 	@Override
@@ -34,12 +34,12 @@ public class EnchantmentIndustry implements ModInitializer {
 		CeiRecipeTypes.register();
 		CeiTags.register();
 
+		// CRITICAL: Finalize registration. This MUST be called last.
+		REGISTRATE.register();
+
 		// Networking & Advancements
 		CeiPackets.registerPackets();
 		CeiAdvancements.register();
-
-		// Temporarily disabled if CeiTriggers.register() is missing in your source
-		// CeiTriggers.register();
 
 		LOGGER.info("Create Enchantment Industry initialized");
 	}

@@ -23,9 +23,6 @@
     ],
     "fabric-datagen": [
       "plus.dragons.createenchantmentindustry.EnchantmentIndustryData"
-    ],
-    "jei_mod_plugin": [
-      "plus.dragons.createenchantmentindustry.compat.jei.CeiJEIPlugin"
     ]
   },
   "mixins": [
@@ -33,10 +30,10 @@
   ],
   "accessWidener" : "create_enchantment_industry.accesswidener",
   "depends": {
-    "fabricloader": ">=${fabric_loader_version}",
-    "fabric-api": ">=${fabric_api_version}",
-    "create": "*",
-    "minecraft": "${minecraft_version}"
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.20.1",
+    "create": ">=0.6.0",
+    "fabric-api": "*"
   },
   "recommends": {
     "create": "${create_version}"
