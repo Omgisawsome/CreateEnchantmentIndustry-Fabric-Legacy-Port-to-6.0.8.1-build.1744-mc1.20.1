@@ -6,14 +6,12 @@ import com.simibubi.create.content.kinetics.belt.transport.TransportedItemStack;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleSlotStorage;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
-import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 import net.minecraft.MethodsReturnNonnullByDefault;
 import net.minecraft.core.Direction;
-import net.minecraft.util.Unit;
 import net.minecraft.world.item.ItemStack;
 
 @MethodsReturnNonnullByDefault
-public class EnchantingItemHandler extends SnapshotParticipant<Unit> implements SingleSlotStorage<ItemVariant> {
+public class EnchantingItemHandler implements SingleSlotStorage<ItemVariant> {
 	private final BlazeEnchanterBlockEntity be;
 	private final Direction side;
 
@@ -24,22 +22,26 @@ public class EnchantingItemHandler extends SnapshotParticipant<Unit> implements 
 
 	@Override
 	public long insert(ItemVariant resource, long maxAmount, TransactionContext transaction) {
+		// Only allow insertion if the enchanter is empty
 		if (!be.getHeldItemStack().isEmpty())
 			return 0;
 
 		ItemStack stack = resource.toStack();
+
+		// Enchanting logic check
 		if (Enchanting.getValidEnchantment(stack, be.targetItem, be.hyper()) == null)
 			return 0;
 
-		int toInsert = GenericItemEmptying.canItemBeEmptied(be.getLevel(), stack)
-				? 1
-				: Math.min((int) maxAmount, resource.getItem().getMaxStackSize());
+		// Fabric Transfer API: Blaze Enchanter processes 1 item at a time
+		int toInsert = 1;
 
-		stack.setCount(toInsert);
-
-		TransportedItemStack heldItem = new TransportedItemStack(stack);
+		// Create the transported stack for the BE
+		TransportedItemStack heldItem = new TransportedItemStack(stack.copy());
+		heldItem.stack.setCount(toInsert);
 		heldItem.prevBeltPosition = 0;
+		heldItem.beltPosition = 0;
 
+		// Use the BE's participant to allow transaction rollbacks
 		be.snapshotParticipant.updateSnapshots(transaction);
 		be.setHeldItem(heldItem, side.getOpposite());
 
@@ -49,17 +51,23 @@ public class EnchantingItemHandler extends SnapshotParticipant<Unit> implements 
 	@Override
 	public long extract(ItemVariant resource, long maxAmount, TransactionContext transaction) {
 		TransportedItemStack held = be.heldItem;
-		if (held == null)
+		if (held == null || held.stack.isEmpty())
+			return 0;
+
+		// Ensure the requested resource matches what is held
+		if (!resource.matches(held.stack))
 			return 0;
 
 		int toExtract = Math.min((int) maxAmount, held.stack.getCount());
-		ItemStack stack = held.stack.copy();
-		stack.shrink(toExtract);
 
+		// Update snapshot before modification
 		be.snapshotParticipant.updateSnapshots(transaction);
-		be.heldItem.stack = stack;
 
-		if (stack.isEmpty())
+		ItemStack newStack = held.stack.copy();
+		newStack.shrink(toExtract);
+		be.heldItem.stack = newStack;
+
+		if (be.heldItem.stack.isEmpty())
 			be.heldItem = null;
 
 		return toExtract;
@@ -83,7 +91,8 @@ public class EnchantingItemHandler extends SnapshotParticipant<Unit> implements 
 
 	@Override
 	public long getCapacity() {
-		return getStack().getMaxStackSize();
+		// Standard slot capacity
+		return 64;
 	}
 
 	public ItemStack getStack() {
@@ -91,19 +100,5 @@ public class EnchantingItemHandler extends SnapshotParticipant<Unit> implements 
 		if (held == null || held.stack == null || held.stack.isEmpty())
 			return ItemStack.EMPTY;
 		return held.stack;
-	}
-
-	@Override
-	protected Unit createSnapshot() {
-		return Unit.INSTANCE;
-	}
-
-	@Override
-	protected void readSnapshot(Unit snapshot) {}
-
-	@Override
-	protected void onFinalCommit() {
-		super.onFinalCommit();
-		be.notifyUpdate();
 	}
 }

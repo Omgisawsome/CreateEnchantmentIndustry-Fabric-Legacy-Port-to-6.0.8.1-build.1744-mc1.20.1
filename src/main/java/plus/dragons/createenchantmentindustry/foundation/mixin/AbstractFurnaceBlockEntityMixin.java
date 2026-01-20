@@ -53,14 +53,19 @@ public abstract class AbstractFurnaceBlockEntityMixin
 
 	@Unique
 	protected long calculateExperienceStored() {
-		double total = 0.0;
+		float total = 0.0f; // Use float to match recipe.getExperience()
 
 		for (var entry : recipesUsed.object2IntEntrySet()) {
 			total += getLevel()
 					.getRecipeManager()
 					.byKey(entry.getKey())
-					.map(r -> ((AbstractCookingRecipe) r).getExperience() * entry.getIntValue())
-					.orElse(0.0);
+					.map(r -> {
+						if (r instanceof AbstractCookingRecipe cookingRecipe) {
+							return cookingRecipe.getExperience() * entry.getIntValue();
+						}
+						return 0.0f;
+					})
+					.orElse(0.0f);
 		}
 
 		return (long) (total * UNIT_PER_MB);
@@ -72,20 +77,17 @@ public abstract class AbstractFurnaceBlockEntityMixin
 
 	@Inject(method = "setRecipeUsed", at = @At("TAIL"))
 	private void injectSetRecipeUsed(@Nullable Recipe<?> recipe, CallbackInfo ci) {
-		if (recipe == null)
-			return;
+		if (recipe instanceof AbstractCookingRecipe cookingRecipe) {
+			long stored = internalTank.getFluidAmount();
+			long added = (long) (cookingRecipe.getExperience() * UNIT_PER_MB);
 
-		long stored = internalTank.getFluidAmount();
-		long added = stored == 0
-				? calculateExperienceStored()
-				: (long) (((AbstractCookingRecipe) recipe).getExperience() * UNIT_PER_MB);
-
-		internalTank.setFluid(
-				new FluidStack(
-						FluidVariant.of(CeiFluids.EXPERIENCE.getSource()),
-						stored + added
-				)
-		);
+			internalTank.setFluid(
+					new FluidStack(
+							CeiFluids.EXPERIENCE.get().getSource(),
+							stored + added
+					)
+			);
+		}
 	}
 
 	/* ------------------------------------------------------------
@@ -95,17 +97,20 @@ public abstract class AbstractFurnaceBlockEntityMixin
 	@Unique
 	protected final FluidTank internalTank = new FluidTank(
 			Long.MAX_VALUE,
-			fs -> fs.getType().equals(FluidVariant.of(CeiFluids.EXPERIENCE.getSource()))
+			fs -> fs.getFluid().isSame(CeiFluids.EXPERIENCE.get().getSource())
 	) {
 		@Override
 		protected void onContentsChanged() {
+			super.onContentsChanged();
 			long expected = calculateExperienceStored();
-			long diff = expected - getFluidAmount();
+			long current = getFluidAmount();
+			long diff = expected - current;
 
 			if (diff <= 0)
 				return;
 
-			if (diff >= expected) {
+			// If current is 0, it means the tank was fully drained, so clear recipe history
+			if (current == 0) {
 				recipesUsed.clear();
 				return;
 			}
@@ -117,13 +122,15 @@ public abstract class AbstractFurnaceBlockEntityMixin
 				if (recipeOpt.isEmpty())
 					continue;
 
-				var recipe = (AbstractCookingRecipe) recipeOpt.get();
-				long xpPer = (long) (recipe.getExperience() * UNIT_PER_MB);
+				if (recipeOpt.get() instanceof AbstractCookingRecipe recipe) {
+					long xpPer = (long) (recipe.getExperience() * UNIT_PER_MB);
+					if (xpPer <= 0) continue;
 
-				int remove = (int) Math.min(diff / xpPer, entry.getIntValue());
-				if (remove > 0) {
-					diff -= xpPer * remove;
-					recipesUsed.addTo(recipe.getId(), -remove);
+					int remove = (int) Math.min(diff / xpPer, entry.getIntValue());
+					if (remove > 0) {
+						diff -= xpPer * remove;
+						recipesUsed.addTo(recipe.getId(), -remove);
+					}
 				}
 			}
 		}
@@ -139,6 +146,7 @@ public abstract class AbstractFurnaceBlockEntityMixin
 
 	@Override
 	public @Nullable Storage<FluidVariant> getFluidStorage(Direction side) {
+		// Allow extraction from any horizontal side (piping out XP)
 		if (side != null && side.getAxis().isHorizontal())
 			return exposedExperienceTank;
 		return null;

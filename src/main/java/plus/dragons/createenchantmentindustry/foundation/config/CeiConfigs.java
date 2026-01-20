@@ -1,25 +1,21 @@
 package plus.dragons.createenchantmentindustry.foundation.config;
 
-
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import fuzs.forgeconfigapiport.api.config.v2.ForgeConfigRegistry;
-import fuzs.forgeconfigapiport.api.config.v2.ModConfigEvents;
-
 import org.apache.commons.lang3.tuple.Pair;
 
+import fuzs.forgeconfigapiport.api.config.v2.ForgeConfigRegistry;
+import fuzs.forgeconfigapiport.api.config.v2.ModConfigEvents;
 import net.createmod.catnip.config.ConfigBase;
-
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.config.ModConfig;
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 
 public class CeiConfigs {
 
-    public static CeiServerConfig SERVER;
-    public static ForgeConfigSpec SERVER_SPEC;
+	public static CeiServerConfig SERVER;
 	private static final Map<ModConfig.Type, ConfigBase> CONFIGS = new EnumMap<>(ModConfig.Type.class);
 
 	public static CeiServerConfig server() {
@@ -42,24 +38,23 @@ public class CeiConfigs {
 	public static void register() {
 		SERVER = register(CeiServerConfig::new, ModConfig.Type.SERVER);
 
+		// FABRIC FIX: Use MOD_ID instead of ID
 		for (Map.Entry<ModConfig.Type, ConfigBase> pair : CONFIGS.entrySet())
-			ForgeConfigRegistry.INSTANCE.register(EnchantmentIndustry.ID, pair.getKey(), pair.getValue().specification);
+			ForgeConfigRegistry.INSTANCE.register(EnchantmentIndustry.MOD_ID, pair.getKey(), pair.getValue().specification);
 
-		ModConfigEvents.loading(EnchantmentIndustry.ID).register(CeiConfigs::onLoad);
-		ModConfigEvents.reloading(EnchantmentIndustry.ID).register(CeiConfigs::onReload);
+		ModConfigEvents.loading(EnchantmentIndustry.MOD_ID).register(CeiConfigs::onLoad);
+		ModConfigEvents.reloading(EnchantmentIndustry.MOD_ID).register(CeiConfigs::onReload);
 	}
 
 	public static void onLoad(ModConfig modConfig) {
 		for (ConfigBase config : CONFIGS.values())
-			if (config.specification == modConfig
-					.getSpec())
+			if (config.specification == modConfig.getSpec())
 				config.onLoad();
 	}
 
 	public static void onReload(ModConfig modConfig) {
 		for (ConfigBase config : CONFIGS.values())
-			if (config.specification == modConfig
-					.getSpec())
+			if (config.specification == modConfig.getSpec())
 				config.onReload();
 	}
 

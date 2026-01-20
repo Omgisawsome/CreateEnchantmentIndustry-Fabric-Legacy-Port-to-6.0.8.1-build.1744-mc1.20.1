@@ -32,22 +32,24 @@ public class EnchantingGuideEditPacket extends SimplePacketBase {
 	}
 
 	@Override
-	public void handle() {
-		// Get the sender on the server side safely
-		ServerPlayer sender = SimplePacketBase.getSender(ServerPlayer.class);
-		if (sender == null)
-			return;
+	public boolean handle(Context context) {
+		context.enqueueWork(() -> {
+			ServerPlayer sender = context.getSender();
+			if (sender == null)
+				return;
 
-		ItemStack mainHandItem = sender.getMainHandItem();
-		if (!CeiItems.ENCHANTING_GUIDE.isIn(mainHandItem))
-			return;
+			ItemStack mainHandItem = sender.getMainHandItem();
+			if (!CeiItems.ENCHANTING_GUIDE.isIn(mainHandItem))
+				return;
 
-		// Write the index and target ItemStack to the tag
-		CompoundTag tag = mainHandItem.getOrCreateTag();
-		tag.putInt("index", index);
-		tag.put("target", NBTSerializer.serializeNBT(itemStack));
+			// Write the index and target ItemStack to the tag
+			CompoundTag tag = mainHandItem.getOrCreateTag();
+			tag.putInt("index", index);
+			tag.put("target", NBTSerializer.serializeNBT(itemStack));
 
-		// Apply a small cooldown to prevent spam
-		sender.getCooldowns().addCooldown(mainHandItem.getItem(), 5);
+			// Apply a small cooldown to prevent spam
+			sender.getCooldowns().addCooldown(mainHandItem.getItem(), 5);
+		});
+		return true;
 	}
 }

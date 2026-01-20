@@ -25,6 +25,7 @@ import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SidedStorageBlockEntity;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant; // Added
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -62,7 +63,6 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	public boolean goggles;
 
-	// We replaced LerpedFloat with simple floats to avoid import errors
 	public float headAngle;
 	public float oHeadAngle;
 	public float flip;
@@ -74,6 +74,25 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	private static final Random bookRandom = new Random();
 	protected final Random random = new Random();
+
+	// FABRIC: Transaction logic for held items
+	public final SnapshotParticipant<TransportedItemStack> snapshotParticipant = new SnapshotParticipant<>() {
+		@Override
+		protected TransportedItemStack createSnapshot() {
+			return heldItem == null ? null : heldItem.copy();
+		}
+
+		@Override
+		protected void readSnapshot(TransportedItemStack snapshot) {
+			heldItem = snapshot;
+		}
+
+		@Override
+		protected void onFinalCommit() {
+			setChanged();
+			notifyUpdate();
+		}
+	};
 
 	protected final Map<Direction, LazyOptional<EnchantingItemHandler>> itemHandlers =
 			new IdentityHashMap<>();
@@ -88,6 +107,14 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	public ItemStack getHeldItemStack() {
 		return heldItem == null ? ItemStack.EMPTY : heldItem.stack;
+	}
+
+	// Added to resolve "cannot find symbol" in ItemHandler
+	public void setHeldItem(TransportedItemStack heldItem, Direction side) {
+		this.heldItem = heldItem;
+		this.heldItem.insertedFrom = side;
+		setChanged();
+		notifyUpdate();
 	}
 
 	@Override
@@ -207,6 +234,12 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			if (fluid.getFluid() instanceof ExperienceFluid exp)
 				exp.drop(server, Vec3.atCenterOf(worldPosition), (int) fluid.getAmount());
 		}
+	}
+
+	public void setTargetItem(ItemStack targetItem) {
+		this.targetItem = targetItem;
+		setChanged();
+		notifyUpdate();
 	}
 
 	@Override

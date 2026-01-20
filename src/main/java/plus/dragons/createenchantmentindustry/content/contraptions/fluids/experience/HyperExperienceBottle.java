@@ -26,7 +26,6 @@ public class HyperExperienceBottle extends ThrowableItemProjectile {
 		super(CeiEntityTypes.HYPER_EXPERIENCE_BOTTLE.get(), pShooter, pLevel);
 	}
 
-
 	@Override
 	protected Item getDefaultItem() {
 		return CeiItems.HYPER_EXP_BOTTLE.get();
@@ -38,24 +37,25 @@ public class HyperExperienceBottle extends ThrowableItemProjectile {
 		return entityBuilder.sized(.25f, .25f);
 	}
 
-	/**
-	 * Gets the amount of gravity to apply to the thrown entity with each tick.
-	 */
+	@Override
 	protected float getGravity() {
 		return 0.07F;
 	}
 
-	/**
-	 * Called when this EntityFireball hits a block or entity.
-	 */
+	@Override
 	protected void onHit(HitResult pResult) {
 		super.onHit(pResult);
-		if (this.level() instanceof ServerLevel) {
-			this.level().levelEvent(2002, this.blockPosition(), PotionUtils.getColor(Potions.WATER));
+		if (this.level() instanceof ServerLevel serverLevel) {
+			serverLevel.levelEvent(2002, this.blockPosition(), PotionUtils.getColor(Potions.WATER));
+
 			int amount = 3 + this.level().random.nextInt(5) + this.level().random.nextInt(5);
-			CeiFluids.HYPER_EXPERIENCE.get().drop((ServerLevel)this.level(), this.position(), amount);
+
+			// FABRIC FIX: Access the drop logic via the CeiFluids entry directly.
+			// If the fluid instance itself doesn't have .drop(),
+			// we use the HyperExperienceFluid class directly.
+			HyperExperienceFluid.drop(serverLevel, this.position(), amount);
+
 			this.discard();
 		}
 	}
-
 }

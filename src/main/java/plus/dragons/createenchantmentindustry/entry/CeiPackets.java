@@ -4,7 +4,6 @@ import java.util.function.Function;
 
 import com.simibubi.create.foundation.networking.SimplePacketBase;
 
-import me.pepperbell.simplenetworking.S2CPacket;
 import me.pepperbell.simplenetworking.SimpleChannel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -15,57 +14,63 @@ import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter.BlazeEnchanterEditPacket;
 import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter.EnchantingGuideEditPacket;
 
-
 public enum CeiPackets {
 
-    // Client to Server
-    CONFIGURE_ENCHANTING_GUIDE_FOR_BLAZE(EnchantingGuideEditPacket.class, EnchantingGuideEditPacket::new, SimplePacketBase.NetworkDirection.PLAY_TO_SERVER),
-    CONFIGURE_BLAZE_ENCHANTER(BlazeEnchanterEditPacket.class, BlazeEnchanterEditPacket::new, SimplePacketBase.NetworkDirection.PLAY_TO_SERVER);
+	// Client to Server
+	CONFIGURE_ENCHANTING_GUIDE_FOR_BLAZE(EnchantingGuideEditPacket.class, EnchantingGuideEditPacket::new, SimplePacketBase.NetworkDirection.PLAY_TO_SERVER),
+	CONFIGURE_BLAZE_ENCHANTER(BlazeEnchanterEditPacket.class, BlazeEnchanterEditPacket::new, SimplePacketBase.NetworkDirection.PLAY_TO_SERVER);
 
-    public static final ResourceLocation CHANNEL_NAME = EnchantmentIndustry.genRL("main");
-    public static final int NETWORK_VERSION = 1;
-    public static final String NETWORK_VERSION_STR = String.valueOf(NETWORK_VERSION);
-    public static SimpleChannel channel;
+	public static final ResourceLocation CHANNEL_NAME = EnchantmentIndustry.genRL("main");
+	public static SimpleChannel channel;
 
-    private final CeiPackets.PacketType<?> packetType;
+	private final PacketType<?> packetType;
 
-    <T extends SimplePacketBase> CeiPackets(Class<T> type, Function<FriendlyByteBuf, T> factory,
+	<T extends SimplePacketBase> CeiPackets(Class<T> type, Function<FriendlyByteBuf, T> factory,
 											SimplePacketBase.NetworkDirection direction) {
-		packetType = new CeiPackets.PacketType<>(type, factory, direction);
-    }
+		packetType = new PacketType<>(type, factory, direction);
+	}
 
-    public static void registerPackets() {
+	public static void registerPackets() {
 		channel = new SimpleChannel(CHANNEL_NAME);
-        for (CeiPackets packet : values())
-            packet.packetType.register();
-    }
+		for (CeiPackets packet : values())
+			packet.packetType.register();
+	}
 
 	public static SimpleChannel getChannel() {
 		return channel;
 	}
 
-	public static void sendToNear(Level world, BlockPos pos, int range, Object message) {
-		getChannel().sendToClientsAround((S2CPacket) message, (ServerLevel) world, pos, range);
+	/**
+	 * FABRIC FIX: Use the channel's native sendToClientsAround which handles
+	 * the conversion from SimplePacketBase internally or via the registered decoder.
+	 */
+	public static void sendToNear(Level world, BlockPos pos, int range, SimplePacketBase message) {
+		if (!(world instanceof ServerLevel serverLevel)) return;
+
+		// SimpleNetworking on Fabric uses this approach for "ToNear"
+		getChannel().sendToClientsAround(message, serverLevel, pos, range);
 	}
 
-    private static class PacketType<T extends SimplePacketBase> {
+	private static class PacketType<T extends SimplePacketBase> {
 		private static int index = 0;
 
-		private Function<FriendlyByteBuf, T> decoder;
-		private Class<T> type;
-		private SimplePacketBase.NetworkDirection direction;
+		private final Function<FriendlyByteBuf, T> decoder;
+		private final Class<T> type;
+		private final SimplePacketBase.NetworkDirection direction;
 
 		private PacketType(Class<T> type, Function<FriendlyByteBuf, T> factory, SimplePacketBase.NetworkDirection direction) {
-			decoder = factory;
+			this.decoder = factory;
 			this.type = type;
 			this.direction = direction;
 		}
 
 		private void register() {
+			// Porting Lib / Simple Networking registration
+			int id = index++;
 			switch (direction) {
-				case PLAY_TO_CLIENT -> getChannel().registerS2CPacket(type, index++, decoder);
-				case PLAY_TO_SERVER -> getChannel().registerC2SPacket(type, index++, decoder);
+				case PLAY_TO_CLIENT -> getChannel().registerS2CPacket(type, id, decoder);
+				case PLAY_TO_SERVER -> getChannel().registerC2SPacket(type, id, decoder);
 			}
 		}
-    }
+	}
 }

@@ -11,10 +11,13 @@ public class CeiBlockPartials {
 			PRINTER_BOTTOM = block("printer/bottom");
 
 	private static PartialModel block(String path) {
-		// The constructor remains the same, accepting a ResourceLocation
-		return new PartialModel(EnchantmentIndustry.genRL("block/" + path));
+		// FABRIC/FLYWHEEL FIX: Use the static .of() factory method instead of 'new'
+		return PartialModel.of(EnchantmentIndustry.genRL("block/" + path));
 	}
 
-	public static void register() {}
+	public static void register() {
+		// Flywheel usually handles the discovery of static PartialModels automatically
+		// if the class is loaded, but this method exists for entry point consistency.
+	}
 
 }

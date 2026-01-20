@@ -17,13 +17,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllCreativeModeTabs;
 import com.simibubi.create.AllFluids;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.foundation.data.CreateRegistrate;
+import com.tterrag.registrate.util.entry.RegistryEntry;
 
 import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import it.unimi.dsi.fastutil.objects.ReferenceLinkedOpenHashSet;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
@@ -35,10 +36,10 @@ import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 import plus.dragons.createenchantmentindustry.entry.CeiItems;
 
 @Deprecated
-@Mixin(targets = "com.simibubi.create.AllCreativeModeTabs$RegistrateDisplayItemsGenerator")
+@Mixin(targets = "com.simibubi.create.AllCreativeModeTabs$RegistrateDisplayItemsGenerator", remap = false)
 public abstract class RegistrateDisplayItemsGeneratorMixin {
 
-	@Shadow(remap = false) @Final private Supplier<CreativeModeTab> tabFilter;
+	@Shadow @Final private Supplier<CreativeModeTab> tabFilter;
 
 	@SuppressWarnings("unchecked")
 	private static void addOrdering(List<Object> orderings, String name, Item item, Item anchor) {
@@ -52,7 +53,7 @@ public abstract class RegistrateDisplayItemsGeneratorMixin {
 		}
 	}
 
-	@Inject(method = "makeOrderings", at = @At("TAIL"), cancellable = true, remap = false)
+	@Inject(method = "makeOrderings", at = @At("TAIL"), cancellable = true)
 	private static void injectMakeOrderingsReturn(CallbackInfoReturnable<List<?>> cir) {
 		List<?> orderings = cir.getReturnValue();
 
@@ -70,13 +71,16 @@ public abstract class RegistrateDisplayItemsGeneratorMixin {
 		cir.setReturnValue(orderings);
 	}
 
-	@Inject(method = "collectBlocks", at = @At("TAIL"), cancellable = true, remap = false)
+	@Inject(method = "collectBlocks", at = @At("TAIL"), cancellable = true)
 	private void injectCollectBlocks(Predicate<Item> exclusionPredicate, CallbackInfoReturnable<List<Item>> cir) {
 		List<Item> items = cir.getReturnValue();
+		CreativeModeTab tab = tabFilter.get();
+		var tabKey = BuiltInRegistries.CREATIVE_MODE_TAB.getResourceKey(tab).orElse(null);
 
-		for (Block block : REGISTRATE.getAll(Registries.BLOCK)) {
-			if (!CreateRegistrate.isInCreativeTab(block, tabFilter.get()))
+		for (RegistryEntry<Block> entry : REGISTRATE.getAll(Registries.BLOCK)) {
+			if (tabKey != null && !CreateRegistrate.isInCreativeTab(entry, tabKey))
 				continue;
+			Block block = entry.get();
 			Item item = block.asItem();
 			if (item == Items.AIR || exclusionPredicate.test(item))
 				continue;
@@ -86,13 +90,16 @@ public abstract class RegistrateDisplayItemsGeneratorMixin {
 		cir.setReturnValue(new ReferenceArrayList<>(new ReferenceLinkedOpenHashSet<>(items)));
 	}
 
-	@Inject(method = "collectItems", at = @At("TAIL"), cancellable = true, remap = false)
+	@Inject(method = "collectItems", at = @At("TAIL"), cancellable = true)
 	private void injectCollectItems(Predicate<Item> exclusionPredicate, CallbackInfoReturnable<List<Item>> cir) {
 		List<Item> items = cir.getReturnValue();
+		CreativeModeTab tab = tabFilter.get();
+		var tabKey = BuiltInRegistries.CREATIVE_MODE_TAB.getResourceKey(tab).orElse(null);
 
-		for (Item item : REGISTRATE.getAll(Registries.ITEM)) {
-			if (!CreateRegistrate.isInCreativeTab(item, tabFilter.get()))
+		for (RegistryEntry<Item> entry : REGISTRATE.getAll(Registries.ITEM)) {
+			if (tabKey != null && !CreateRegistrate.isInCreativeTab(entry, tabKey))
 				continue;
+			Item item = entry.get();
 			if (item instanceof BlockItem || exclusionPredicate.test(item))
 				continue;
 			items.add(item);

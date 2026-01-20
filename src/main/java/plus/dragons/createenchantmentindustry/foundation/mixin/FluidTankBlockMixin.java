@@ -9,7 +9,6 @@ import com.simibubi.create.content.equipment.wrench.IWrenchable;
 import com.simibubi.create.content.fluids.tank.CreativeFluidTankBlockEntity;
 import com.simibubi.create.content.fluids.tank.FluidTankBlock;
 import com.simibubi.create.content.fluids.tank.FluidTankBlockEntity;
-import com.simibubi.create.content.processing.basin.BasinBlockEntity;
 import com.simibubi.create.foundation.block.IBE;
 
 import net.minecraft.core.BlockPos;
@@ -21,13 +20,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import plus.dragons.createenchantmentindustry.content.contraptions.fluids.experience.ExperienceFluid;
 
-@Mixin(FluidTankBlock.class)
-public abstract class FluidTankBlockMixin extends Block implements IBE<BasinBlockEntity>, IWrenchable {
+@Mixin(value = FluidTankBlock.class, remap = false)
+public abstract class FluidTankBlockMixin extends Block implements IBE<FluidTankBlockEntity>, IWrenchable {
 	public FluidTankBlockMixin(Properties pProperties) {
 		super(pProperties);
 	}
 
-	// Support Experience Drop with Block Break
 	@Inject(method = "onRemove", at = @At(value = "INVOKE",
 			target = "Lnet/minecraft/world/level/Level;removeBlockEntity(Lnet/minecraft/core/BlockPos;)V"),
 			cancellable = true)
@@ -39,28 +37,33 @@ public abstract class FluidTankBlockMixin extends Block implements IBE<BasinBloc
 		if (!(be instanceof FluidTankBlockEntity tankBE) || be instanceof CreativeFluidTankBlockEntity)
 			return;
 
-		var controllerBE = tankBE.getControllerBE();
-		var fluidStack = controllerBE.getFluid(0);
-		var fluidStackBackup = fluidStack.copy();
-		var maxSize = controllerBE.getTotalTankSize();
+		FluidTankBlockEntity controllerBE = tankBE.getControllerBE();
+		if (controllerBE == null) return;
 
+		var fluidStack = controllerBE.getTankInventory().getFluid();
 		if (fluidStack.getFluid() instanceof ExperienceFluid expFluid) {
-			level.removeBlockEntity(pos);
-			// Split multi-block tanks
-			tankBE.getControllerBE().getConnectedTanks().forEach(FluidTankBlockEntity::splitMulti);
+			// Get backup of amount before we start removing logic
+			long amount = fluidStack.getAmount();
+			int maxSize = controllerBE.getTotalTankSize();
+
+			// FABRIC FIX: Instead of manual splitMulti (which is internal/different on Fabric),
+			// we let the original code proceed after we handle our drop logic,
+			// or we call the removal logic specifically.
 
 			Vec3 center = Vec3.atCenterOf(pos);
 
-			if (maxSize == 1) {
-				expFluid.drop(serverLevel, center, (int) fluidStackBackup.getAmount());
+			if (maxSize <= 1) {
+				ExperienceFluid.drop(serverLevel, center, (int) amount);
 			} else {
-				var total = maxSize * (FluidTankBlockEntity.getCapacityMultiplier() - 1);
-				var leftover = fluidStackBackup.getAmount() - total;
-				if (leftover > 0) {
-					expFluid.drop(serverLevel, center, (int) leftover);
-				}
+				// Fabric uses different capacity multipliers.
+				// We drop the proportional amount for one block.
+				long capacityPerBlock = FluidTankBlockEntity.getCapacityMultiplier();
+				long toDrop = Math.min(amount, capacityPerBlock);
+				ExperienceFluid.drop(serverLevel, center, (int) toDrop);
 			}
-			ci.cancel();
+
+			// We don't cancel here anymore to let Create's native multiblock
+			// destruction logic (which is complex on Fabric) run its course.
 		}
 	}
 }

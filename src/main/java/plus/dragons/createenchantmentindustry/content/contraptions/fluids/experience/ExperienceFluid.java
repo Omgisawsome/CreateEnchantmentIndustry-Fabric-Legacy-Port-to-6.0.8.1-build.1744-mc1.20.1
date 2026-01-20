@@ -132,7 +132,7 @@ public class ExperienceFluid extends Fluid {
 		drop(level, pos, xp);
 	}
 
-	public void drop(ServerLevel level, Vec3 pos, int xp) {
+	public static void drop(ServerLevel level, Vec3 pos, int xp) {
 		while (xp > 0) {
 			int orbValue = ExperienceOrb.getExperienceValue(xp);
 			xp -= orbValue;
