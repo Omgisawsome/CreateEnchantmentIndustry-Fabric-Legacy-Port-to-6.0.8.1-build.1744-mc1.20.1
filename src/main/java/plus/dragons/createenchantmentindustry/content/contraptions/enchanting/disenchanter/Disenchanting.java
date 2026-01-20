@@ -15,6 +15,7 @@ import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.util.Mth;
+import net.minecraft.world.Container; // Added import
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -41,8 +42,9 @@ public class Disenchanting {
 
 		WRAPPER.setItem(0, itemStack);
 
+		// FIX: Changed ItemStackHandlerContainer to Container
 		return CeiRecipeTypes.DISENCHANTING
-				.<ItemStackHandlerContainer, DisenchantRecipe>find(WRAPPER, level)
+				.<Container, DisenchantRecipe>find(WRAPPER, level)
 				.map(recipe -> {
 					if (!recipe.hasNoResult())
 						return itemStack;
@@ -104,9 +106,10 @@ public class Disenchanting {
 		}
 
 		WRAPPER.setItem(0, itemStack);
+		// FIX: Changed ItemStackHandlerContainer to Container
 		var recipe =
 				CeiRecipeTypes.DISENCHANTING
-						.<ItemStackHandlerContainer, DisenchantRecipe>find(WRAPPER, level)
+						.<Container, DisenchantRecipe>find(WRAPPER, level)
 						.orElse(null);
 
 		if (recipe != null && !recipe.hasNoResult()) {
