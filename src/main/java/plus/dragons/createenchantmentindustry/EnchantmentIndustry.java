@@ -15,16 +15,18 @@ public class EnchantmentIndustry implements ModInitializer {
 	public static final String MOD_ID = "create_enchantment_industry";
 	public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
 
+	// Registrate instance for standard Create-style registration
 	public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(MOD_ID);
 
-	// Fabric 1.20.1 uses 81 units per mB
+	// Fabric 1.20.1 uses 81 units per mB for fluid consistency
 	public static final int UNIT_PER_MB = 81;
 
 	@Override
 	public void onInitialize() {
+		// 1. Configs first
 		CeiConfigs.register();
 
-		// Content registration
+		// 2. Content registration (Order is important for dependencies)
 		CeiBlocks.register();
 		CeiBlockEntities.register();
 		CeiContainerTypes.register();
@@ -34,14 +36,14 @@ public class EnchantmentIndustry implements ModInitializer {
 		CeiRecipeTypes.register();
 		CeiTags.register();
 
-		// CRITICAL: Finalize registration. This MUST be called last.
+		// 3. Finalize registration - MUST be called after all content is registered
 		REGISTRATE.register();
 
-		// Networking & Advancements
+		// 4. Networking, Advancements, and Post-Registration logic
 		CeiPackets.registerPackets();
 		CeiAdvancements.register();
 
-		LOGGER.info("Create Enchantment Industry initialized");
+		LOGGER.info("Create Enchantment Industry initialized successfully!");
 	}
 
 	public static ResourceLocation genRL(String path) {

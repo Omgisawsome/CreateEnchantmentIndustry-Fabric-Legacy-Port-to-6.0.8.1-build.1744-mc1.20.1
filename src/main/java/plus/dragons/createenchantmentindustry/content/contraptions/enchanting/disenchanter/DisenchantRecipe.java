@@ -17,7 +17,9 @@ public class DisenchantRecipe extends ProcessingRecipe<Container> {
 	private final long experience;
 
 	public DisenchantRecipe(ProcessingRecipeBuilder.ProcessingRecipeParams params) {
-		super(CeiRecipeTypes.DISENCHANTING.getType(), params);
+		// FIXED: Pass the enum entry itself (CeiRecipeTypes.DISENCHANTING)
+		// instead of calling .getType(). The enum now implements IRecipeTypeInfo.
+		super(CeiRecipeTypes.DISENCHANTING, params);
 
 		if (fluidResults.isEmpty()) {
 			throw new IllegalArgumentException(
@@ -38,10 +40,7 @@ public class DisenchantRecipe extends ProcessingRecipe<Container> {
 
 	/* -------------------- REQUIRED RECIPE OVERRIDES -------------------- */
 
-	@Override
-	public ResourceLocation getId() {
-		return id;
-	}
+	// Removed manual getId() override as it is handled by ProcessingRecipe
 
 	@Override
 	public RecipeSerializer<?> getSerializer() {
@@ -55,6 +54,7 @@ public class DisenchantRecipe extends ProcessingRecipe<Container> {
 
 	@Override
 	public boolean matches(Container container, Level level) {
+		if (ingredients.isEmpty() || container.isEmpty()) return false;
 		return ingredients.get(0).test(container.getItem(0));
 	}
 

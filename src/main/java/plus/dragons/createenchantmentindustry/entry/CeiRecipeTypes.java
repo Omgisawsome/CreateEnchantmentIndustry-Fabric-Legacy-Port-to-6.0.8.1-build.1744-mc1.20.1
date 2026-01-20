@@ -1,7 +1,7 @@
 package plus.dragons.createenchantmentindustry.entry;
 
-import java.util.Optional;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -9,7 +9,6 @@ import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 import com.simibubi.create.content.processing.recipe.ProcessingRecipeSerializer;
 import com.simibubi.create.foundation.recipe.IRecipeTypeInfo;
 
-import io.github.fabricators_of_create.porting_lib.util.ShapedRecipeUtil;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -18,7 +17,6 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
-
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.DisenchantRecipe;
 
@@ -32,18 +30,17 @@ public enum CeiRecipeTypes implements IRecipeTypeInfo {
 	private final RecipeType<?> type;
 
 	CeiRecipeTypes(ProcessingRecipeBuilder.ProcessingRecipeFactory<?> factory) {
-		// FIXED: Manually convert enum name to snake_case id string
-		// This replaces the missing EnchantmentIndustry.LANG.asId()
 		String nameId = name().toLowerCase(Locale.ROOT);
-
 		this.id = EnchantmentIndustry.genRL(nameId);
 
+		// Register Serializer
 		this.serializer = Registry.register(
 				BuiltInRegistries.RECIPE_SERIALIZER,
 				id,
 				new ProcessingRecipeSerializer<>(factory)
 		);
 
+		// Register Type
 		this.type = Registry.register(
 				BuiltInRegistries.RECIPE_TYPE,
 				id,
@@ -54,13 +51,12 @@ public enum CeiRecipeTypes implements IRecipeTypeInfo {
 	/* -------------------- REGISTRATION -------------------- */
 
 	public static void register() {
-		ShapedRecipeUtil.setCraftingSize(9, 9);
-		// Fabric: classloading registers everything
+		// Trigger class loading to execute the enum constructor and registry calls
 	}
 
 	private static <T extends Recipe<?>> RecipeType<T> simpleType(ResourceLocation id) {
 		final String stringId = id.toString();
-		return new RecipeType<>() {
+		return new RecipeType<T>() {
 			@Override
 			public String toString() {
 				return stringId;
@@ -68,7 +64,7 @@ public enum CeiRecipeTypes implements IRecipeTypeInfo {
 		};
 	}
 
-	/* -------------------- CREATE API -------------------- */
+	/* -------------------- IRecipeTypeInfo IMPLEMENTATION -------------------- */
 
 	@Override
 	public ResourceLocation getId() {
