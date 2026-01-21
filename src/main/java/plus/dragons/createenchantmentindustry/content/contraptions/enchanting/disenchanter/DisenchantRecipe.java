@@ -3,7 +3,6 @@ package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.d
 import com.simibubi.create.content.processing.recipe.ProcessingRecipe;
 import com.simibubi.create.content.processing.recipe.ProcessingRecipeBuilder;
 
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -17,8 +16,6 @@ public class DisenchantRecipe extends ProcessingRecipe<Container> {
 	private final long experience;
 
 	public DisenchantRecipe(ProcessingRecipeBuilder.ProcessingRecipeParams params) {
-		// FIXED: Pass the enum entry itself (CeiRecipeTypes.DISENCHANTING)
-		// instead of calling .getType(). The enum now implements IRecipeTypeInfo.
 		super(CeiRecipeTypes.DISENCHANTING, params);
 
 		if (fluidResults.isEmpty()) {
@@ -29,7 +26,8 @@ public class DisenchantRecipe extends ProcessingRecipe<Container> {
 
 		var fluid = fluidResults.get(0);
 
-		if (!fluid.getFluid().isSame(CeiFluids.EXPERIENCE.get().getSource())) {
+		// FIXED: Removed .get().getSource() because EXPERIENCE is already the Source fluid instance.
+		if (!fluid.getFluid().isSame(CeiFluids.EXPERIENCE)) {
 			throw new IllegalArgumentException(
 					"Illegal Disenchanting Recipe: " + id + " has wrong fluid output!"
 			);
@@ -39,8 +37,6 @@ public class DisenchantRecipe extends ProcessingRecipe<Container> {
 	}
 
 	/* -------------------- REQUIRED RECIPE OVERRIDES -------------------- */
-
-	// Removed manual getId() override as it is handled by ProcessingRecipe
 
 	@Override
 	public RecipeSerializer<?> getSerializer() {

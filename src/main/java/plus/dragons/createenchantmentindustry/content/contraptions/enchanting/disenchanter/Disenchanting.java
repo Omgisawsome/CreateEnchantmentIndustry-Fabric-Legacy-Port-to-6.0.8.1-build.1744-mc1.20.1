@@ -23,8 +23,6 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 
-import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.DisenchanterBlockEntity;
-import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.DisenchantRecipe;
 import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 import plus.dragons.createenchantmentindustry.entry.CeiRecipeTypes;
 
@@ -54,9 +52,10 @@ public class Disenchanting {
 					tank.allowInsertion();
 
 					long amount = recipe.getExperience();
+					// FIXED: Removed .get().getSource()
 					FluidStack fluid =
 							new FluidStack(
-									CeiFluids.EXPERIENCE.get().getSource(),
+									CeiFluids.EXPERIENCE,
 									itemStack.getCount() * amount
 							);
 
@@ -97,9 +96,10 @@ public class Disenchanting {
 				.stream()
 				.anyMatch(e -> !e.isCurse())) {
 
+			// FIXED: Removed .get().getSource()
 			FluidStack xp =
 					new FluidStack(
-							CeiFluids.EXPERIENCE.get().getSource(),
+							CeiFluids.EXPERIENCE,
 							getDisenchantExperience(itemStack)
 					);
 
@@ -113,9 +113,10 @@ public class Disenchanting {
 						.orElse(null);
 
 		if (recipe != null && !recipe.hasNoResult()) {
+			// FIXED: Removed .get().getSource()
 			FluidStack xp =
 					new FluidStack(
-							CeiFluids.EXPERIENCE.get().getSource(),
+							CeiFluids.EXPERIENCE,
 							recipe.getExperience()
 					);
 			ItemStack result =

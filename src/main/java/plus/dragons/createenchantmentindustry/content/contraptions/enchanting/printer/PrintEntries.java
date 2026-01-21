@@ -6,9 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.simibubi.create.AllBlocks;
-import com.simibubi.create.AllItems;
-
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -18,6 +15,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.WrittenBookItem;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.material.Fluid;
+
+import com.simibubi.create.AllItems;
+
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter.Enchanting;
 import plus.dragons.createenchantmentindustry.entry.CeiFluids;
@@ -46,8 +46,9 @@ public class PrintEntries {
 		public boolean valid(ItemStack target, ItemStack tested) { return tested.is(Items.BOOK); }
 		@Override
 		public int requiredInkAmount(ItemStack target) {
+			// FIXED: Removed .get() from HYPER_EXPERIENCE
 			return (int) (getExperienceFromItem(target)
-					* (requiredInkType(target).isSame(CeiFluids.HYPER_EXPERIENCE.get())
+					* (requiredInkType(target).isSame(CeiFluids.HYPER_EXPERIENCE)
 					? CeiConfigs.SERVER.copyEnchantedBookWithHyperExperienceCostCoefficient.get()
 					: CeiConfigs.SERVER.copyEnchantedBookCostCoefficient.get()));
 		}
@@ -55,7 +56,8 @@ public class PrintEntries {
 		public Fluid requiredInkType(ItemStack target) {
 			boolean hyper = EnchantmentHelper.getEnchantments(target).entrySet().stream()
 					.anyMatch(entry -> entry.getValue() > entry.getKey().getMaxLevel());
-			return hyper ? CeiFluids.HYPER_EXPERIENCE.get() : CeiFluids.EXPERIENCE.get();
+			// FIXED: Removed .get() from both fluids
+			return hyper ? CeiFluids.HYPER_EXPERIENCE : CeiFluids.EXPERIENCE;
 		}
 		@Override
 		public boolean isTooExpensive(ItemStack target, int limit) { return requiredInkAmount(target) > limit; }
@@ -98,8 +100,11 @@ public class PrintEntries {
 		public boolean valid(ItemStack target, ItemStack tested) { return tested.is(Items.BOOK); }
 		@Override
 		public int requiredInkAmount(ItemStack target) { return WrittenBookItem.getPageCount(target) * CeiConfigs.SERVER.copyWrittenBookCostPerPage.get() * UNIT_PER_MB; }
+
+		// FIXED: Removed .get() from INK
 		@Override
-		public Fluid requiredInkType(ItemStack target) { return CeiFluids.INK.get(); }
+		public Fluid requiredInkType(ItemStack target) { return CeiFluids.INK; }
+
 		@Override
 		public ItemStack print(ItemStack target, ItemStack material) {
 			ItemStack copy = target.copy();
@@ -137,8 +142,11 @@ public class PrintEntries {
 		public boolean valid(ItemStack target, ItemStack tested) { return tested.is(Items.NAME_TAG) && !tested.hasCustomHoverName(); }
 		@Override
 		public int requiredInkAmount(ItemStack target) { return CeiConfigs.SERVER.copyNameTagCost.get() * UNIT_PER_MB; }
+
+		// FIXED: Removed .get() from INK
 		@Override
-		public Fluid requiredInkType(ItemStack target) { return CeiFluids.INK.get(); }
+		public Fluid requiredInkType(ItemStack target) { return CeiFluids.INK; }
+
 		@Override
 		public boolean isTooExpensive(ItemStack target, int limit) { return requiredInkAmount(target) > limit; }
 		@Override
@@ -165,8 +173,11 @@ public class PrintEntries {
 		public boolean valid(ItemStack target, ItemStack tested) { return tested.is(AllItems.SCHEDULE.get()); }
 		@Override
 		public int requiredInkAmount(ItemStack target) { return CeiConfigs.SERVER.copyTrainScheduleCost.get() * UNIT_PER_MB; }
+
+		// FIXED: Removed .get() from INK
 		@Override
-		public Fluid requiredInkType(ItemStack target) { return CeiFluids.INK.get(); }
+		public Fluid requiredInkType(ItemStack target) { return CeiFluids.INK; }
+
 		@Override
 		public boolean isTooExpensive(ItemStack target, int limit) { return requiredInkAmount(target) > limit; }
 		@Override
@@ -189,8 +200,11 @@ public class PrintEntries {
 		public boolean valid(ItemStack target, ItemStack tested) { return tested.getItem().getDescriptionId().contains("clipboard"); }
 		@Override
 		public int requiredInkAmount(ItemStack target) { return CeiConfigs.SERVER.copyClipboardCost.get() * UNIT_PER_MB; }
+
+		// FIXED: Removed .get() from INK
 		@Override
-		public Fluid requiredInkType(ItemStack target) { return CeiFluids.INK.get(); }
+		public Fluid requiredInkType(ItemStack target) { return CeiFluids.INK; }
+
 		@Override
 		public boolean isTooExpensive(ItemStack target, int limit) { return requiredInkAmount(target) > limit; }
 		@Override

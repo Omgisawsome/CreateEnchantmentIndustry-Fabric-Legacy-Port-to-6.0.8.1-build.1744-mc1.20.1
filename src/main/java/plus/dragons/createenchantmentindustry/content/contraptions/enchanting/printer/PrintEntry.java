@@ -1,35 +1,39 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.printer;
 
+import java.util.List;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
-import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 
-import java.util.List;
+import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 
 public interface PrintEntry {
 
-    ResourceLocation id();
+	ResourceLocation id();
 
-    boolean match(ItemStack toPrint);
+	boolean match(ItemStack toPrint);
 
-    boolean valid(ItemStack target, ItemStack tested);
+	boolean valid(ItemStack target, ItemStack tested);
 
-    int requiredInkAmount(ItemStack target);
+	int requiredInkAmount(ItemStack target);
 
-    default Fluid requiredInkType(ItemStack target) {
-        return CeiFluids.EXPERIENCE.get();
-    }
+	/**
+	 * FIXED: Removed .get() call to match the updated CeiFluids registry.
+	 */
+	default Fluid requiredInkType(ItemStack target) {
+		return CeiFluids.EXPERIENCE;
+	}
 
-    default ItemStack print(ItemStack target, ItemStack material){
-        return target.copy();
-    }
+	default ItemStack print(ItemStack target, ItemStack material){
+		return target.copy();
+	}
 
-    boolean isTooExpensive(ItemStack target, int limit);
+	boolean isTooExpensive(ItemStack target, int limit);
 
-    void addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking, ItemStack target);
+	void addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking, ItemStack target);
 
-    MutableComponent getDisplaySourceContent(ItemStack target);
+	MutableComponent getDisplaySourceContent(ItemStack target);
 }

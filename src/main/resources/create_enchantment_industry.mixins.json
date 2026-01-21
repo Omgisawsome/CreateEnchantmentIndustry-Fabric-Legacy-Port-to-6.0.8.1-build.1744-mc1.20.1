@@ -16,7 +16,8 @@
     "PlayerMixin",
     "SpoutBlockEntityAccessor",
     "SpoutBlockMixin",
-    "TankSegmentAccessor"
+    "TankSegmentAccessor",
+    "OpenEndFluidHandlerMixin"
   ],
   "client": [
     "client.CameraMixin"

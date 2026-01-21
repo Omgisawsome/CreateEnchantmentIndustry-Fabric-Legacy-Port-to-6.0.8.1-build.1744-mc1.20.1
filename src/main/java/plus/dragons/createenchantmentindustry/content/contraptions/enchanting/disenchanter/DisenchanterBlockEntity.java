@@ -231,7 +231,8 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 				}
 			});
 			if (sum.get() != 0) {
-				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE.get(), (long) sum.get() * UNIT_PER_MB);
+				// FIXED: Removed .get()
+				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE, (long) sum.get() * UNIT_PER_MB);
 				try(Transaction t = TransferUtil.getTransaction()){
 					internalTank.allowInsertion();
 					var inserted = internalTank.getPrimaryHandler().insert(fluidStack.getType(), fluidStack.getAmount(), t) / UNIT_PER_MB;
@@ -248,7 +249,6 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 									player.giveExperiencePoints(-total);
 								}
 
-								// SAFETY CHECK FOR ADVANCEMENT TRIGGER
 								if (CeiAdvancements.SPIRIT_TAKING != null && CeiAdvancements.SPIRIT_TAKING.getTrigger() != null) {
 									CeiAdvancements.SPIRIT_TAKING.getTrigger().trigger((ServerPlayer) player);
 								}
@@ -262,7 +262,6 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 								}
 								absorbedXp = true;
 
-								// SAFETY CHECK FOR ADVANCEMENT TRIGGER
 								if (CeiAdvancements.SPIRIT_TAKING != null && CeiAdvancements.SPIRIT_TAKING.getTrigger() != null) {
 									CeiAdvancements.SPIRIT_TAKING.getTrigger().trigger((ServerPlayer) player);
 								}
@@ -281,7 +280,8 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 			internalTank.allowInsertion();
 			for (var orb : experienceOrbs) {
 				var amount = orb.value;
-				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE.get(), (long) amount * UNIT_PER_MB);
+				// FIXED: Removed .get()
+				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE, (long) amount * UNIT_PER_MB);
 				try(Transaction t = TransferUtil.getTransaction()) {
 					var inserted = internalTank.getPrimaryHandler().insert(fluidStack.getType(), fluidStack.getAmount(), t) / UNIT_PER_MB;
 					t.commit();
@@ -347,7 +347,6 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 		if (playerId != null) {
 			var player = level.getPlayerByUUID(playerId);
 
-			// SAFETY CHECK FOR DISENCHANTED TRIGGER
 			if (player != null && CeiTriggers.DISENCHANTED != null)
 				CeiTriggers.DISENCHANTED.trigger(player, (int) totalXp);
 		}
@@ -424,10 +423,13 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 			ItemStack heldItemStack = getHeldItemStack();
 			if(!heldItemStack.isEmpty())
 				Containers.dropItemStack(level, getBlockPos().getX(), getBlockPos().getY(), getBlockPos().getZ(), heldItemStack);
+
 			var tank = getInternalTank().getPrimaryHandler();
 			var fluidStack = tank.getFluid();
-			if(fluidStack.getFluid() instanceof ExperienceFluid expFluid) {
-				expFluid.drop(serverLevel, VecHelper.getCenterOf(getBlockPos()), (int) fluidStack.getAmount());
+
+			// FIXED: Use the static drop method from ExperienceFluid we defined earlier
+			if(fluidStack.getFluid() instanceof ExperienceFluid) {
+				ExperienceFluid.drop(serverLevel, VecHelper.getCenterOf(getBlockPos()), (int) (fluidStack.getAmount() / UNIT_PER_MB));
 			}
 		}
 	}

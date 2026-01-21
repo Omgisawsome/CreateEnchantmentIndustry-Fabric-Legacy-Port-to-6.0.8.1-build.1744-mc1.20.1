@@ -4,40 +4,27 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.FluidState;
 
-/**
- * Hyper Experience Fluid
- * Stronger variant of ExperienceFluid that grants additional effects.
- *
- * Create 6 / Fabric compatible.
- */
-public class HyperExperienceFluid extends ExperienceFluid {
-
-	/**
-	 * xpRatio is hard-coded here.
-	 * No Fluid.Properties or ExperienceFluid.Properties exist anymore.
-	 */
-	public HyperExperienceFluid() {
-		super(10); // xpRatio = 10
-	}
-
-	@Override
-	public HyperExperienceOrb convertToOrb(
-			Level level,
-			double x,
-			double y,
-			double z,
-			int fluidAmount
-	) {
-		return new HyperExperienceOrb(level, x, y, z, fluidAmount * xpRatio);
-	}
+public abstract class HyperExperienceFluid extends ExperienceFluid {
+	protected HyperExperienceFluid() { super(10); }
 
 	@Override
 	public void applyAdditionalEffects(LivingEntity entity, int expAmount) {
-		int duration = 200 * Mth.ceillog2(expAmount);
-
+		int duration = 200 * Mth.ceillog2(Math.max(1, expAmount));
 		entity.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, duration));
 		entity.addEffect(new MobEffectInstance(MobEffects.GLOWING, duration));
+	}
+
+	public static class Flowing extends HyperExperienceFluid {
+		public Flowing() { super(); }
+		@Override public boolean isSource(FluidState state) { return false; }
+		@Override public int getAmount(FluidState state) { return 0; }
+	}
+
+	public static class Source extends HyperExperienceFluid {
+		public Source() { super(); }
+		@Override public boolean isSource(FluidState state) { return true; }
+		@Override public int getAmount(FluidState state) { return 8; }
 	}
 }

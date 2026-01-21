@@ -17,7 +17,6 @@ import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 // FABRIC NATIVE IMPORTS
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 
 public class DisenchantingCategory extends CreateRecipeCategory<DisenchantRecipe> {
 
@@ -35,12 +34,13 @@ public class DisenchantingCategory extends CreateRecipeCategory<DisenchantRecipe
 
 		builder.addSlot(RecipeIngredientRole.OUTPUT, 139, 25)
 				.setBackground(getRenderedSlot(), -1, -1)
-				.addFluidStack(CeiFluids.EXPERIENCE.get(), recipe.getExperience())
+				// REMOVED .get() - EXPERIENCE is now the fluid itself
+				.addFluidStack(CeiFluids.EXPERIENCE, recipe.getExperience())
 				.addTooltipCallback((recipeSlotView, tooltip) -> {
 					long amount = recipe.getExperience();
 					if (amount > 0) {
-						// Using Fabric's native way to get a fluid name from a variant
-						FluidVariant variant = FluidVariant.of(CeiFluids.EXPERIENCE.get());
+						// REMOVED .get() - EXPERIENCE is now the fluid itself
+						FluidVariant variant = FluidVariant.of(CeiFluids.EXPERIENCE);
 						Component name = FluidVariantAttributes.getName(variant);
 
 						tooltip.add(name.copy()

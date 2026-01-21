@@ -30,7 +30,7 @@ import plus.dragons.createenchantmentindustry.entry.CeiRecipeTypes;
 public class CeiJEIPlugin implements IModPlugin {
 
 	private static final ResourceLocation ID =
-			new ResourceLocation(EnchantmentIndustry.MOD_ID, "jei_plugin");
+			new ResourceLocation(EnchantmentIndustry.ID, "jei_plugin");
 
 	private final List<CreateRecipeCategory<?>> allCategories = new ArrayList<>();
 	private IIngredientManager ingredientManager;
@@ -53,13 +53,14 @@ public class CeiJEIPlugin implements IModPlugin {
 		ingredientManager = registration.getIngredientManager();
 		allCategories.forEach(c -> c.registerRecipes(registration));
 
-		// Hide flowing fluids from JEI (Fabric)
+		// FIXED: Updated variable names to match the new definitions in CeiFluids.java
+		// This hides the 'flowing' block versions from JEI so only the buckets/fluids show.
 		ingredientManager.removeIngredientsAtRuntime(
 				FabricTypes.FLUID_STACK,
 				List.of(
-						new JeiFluidIngredient(CeiFluids.EXPERIENCE.get().getFlowing(), 1),
-						new JeiFluidIngredient(CeiFluids.HYPER_EXPERIENCE.get().getFlowing(), 1),
-						new JeiFluidIngredient(CeiFluids.INK.get().getFlowing(), 1)
+						new JeiFluidIngredient(CeiFluids.FLOWING_EXPERIENCE, 1),
+						new JeiFluidIngredient(CeiFluids.FLOWING_HYPER_EXPERIENCE, 1),
+						new JeiFluidIngredient(CeiFluids.FLOWING_INK, 1)
 				)
 		);
 	}
@@ -70,7 +71,7 @@ public class CeiJEIPlugin implements IModPlugin {
 	}
 
 	private static <T extends Recipe<?>> RecipeCategoryBuilder<T> builder(Class<T> cls) {
-		return new RecipeCategoryBuilder<>(EnchantmentIndustry.MOD_ID, cls);
+		return new RecipeCategoryBuilder<>(EnchantmentIndustry.ID, cls);
 	}
 
 	private void loadCategories() {

@@ -25,7 +25,7 @@ import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SidedStorageBlockEntity;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
-import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant; // Added
+import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -41,6 +41,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
 
 import plus.dragons.createenchantmentindustry.content.contraptions.fluids.FilteringFluidTankBehaviour;
@@ -50,6 +51,8 @@ import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 import plus.dragons.createenchantmentindustry.entry.CeiItems;
 import plus.dragons.createenchantmentindustry.entry.CeiTags;
 import plus.dragons.createenchantmentindustry.foundation.config.CeiConfigs;
+
+import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.UNIT_PER_MB;
 
 public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		implements MenuProvider, SidedStorageBlockEntity {
@@ -75,7 +78,6 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	private static final Random bookRandom = new Random();
 	protected final Random random = new Random();
 
-	// FABRIC: Transaction logic for held items
 	public final SnapshotParticipant<TransportedItemStack> snapshotParticipant = new SnapshotParticipant<>() {
 		@Override
 		protected TransportedItemStack createSnapshot() {
@@ -109,7 +111,6 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		return heldItem == null ? ItemStack.EMPTY : heldItem.stack;
 	}
 
-	// Added to resolve "cannot find symbol" in ItemHandler
 	public void setHeldItem(TransportedItemStack heldItem, Direction side) {
 		this.heldItem = heldItem;
 		this.heldItem.insertedFrom = side;
@@ -126,7 +127,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		behaviours.add(internalTank = FilteringFluidTankBehaviour.single(
 				fluid -> fluid.getFluid().is(CeiTags.FluidTag.BLAZE_ENCHANTER_INPUT.tag),
 				this,
-				CeiConfigs.SERVER.blazeEnchanterTankCapacity.get()
+				(long) CeiConfigs.SERVER.blazeEnchanterTankCapacity.get() * UNIT_PER_MB
 		));
 	}
 
@@ -194,7 +195,8 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		Enchanting.Pair<Enchantment, Integer> pair = Enchanting.Pair.of(entry.getFirst(), entry.getSecond());
 		Enchanting.enchantItem(heldItem.stack, pair);
 
-		FluidStack cost = new FluidStack(hyper() ? CeiFluids.HYPER_EXPERIENCE.get().getSource() : CeiFluids.EXPERIENCE.get().getSource(),
+		// FIXED: Casting to (Fluid) to resolve ambiguity and removed .get().getSource()
+		FluidStack cost = new FluidStack((Fluid) (hyper() ? CeiFluids.HYPER_EXPERIENCE : CeiFluids.EXPERIENCE),
 				(long) Enchanting.getExperienceConsumption(entry.getFirst(), entry.getSecond()));
 
 		try (Transaction t = TransferUtil.getTransaction()) {
@@ -221,7 +223,8 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	}
 
 	public boolean hyper() {
-		return CeiFluids.HYPER_EXPERIENCE.is(internalTank.getPrimaryHandler().getFluid().getFluid());
+		// FIXED: Logic check to see if the current fluid is same as Hyper Experience
+		return internalTank.getPrimaryHandler().getFluid().getFluid().isSame(CeiFluids.HYPER_EXPERIENCE);
 	}
 
 	@Override
@@ -231,8 +234,8 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			if (heldItem != null)
 				Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), heldItem.stack);
 			var fluid = internalTank.getPrimaryHandler().getFluid();
-			if (fluid.getFluid() instanceof ExperienceFluid exp)
-				exp.drop(server, Vec3.atCenterOf(worldPosition), (int) fluid.getAmount());
+			if (fluid.getFluid() instanceof ExperienceFluid)
+				ExperienceFluid.drop(server, Vec3.atCenterOf(worldPosition), (int) (fluid.getAmount() / UNIT_PER_MB));
 		}
 	}
 
