@@ -22,12 +22,10 @@ public abstract class OpenEndFluidHandlerMixin extends FluidTank {
 	@Override
 	public long insert(FluidVariant resource, long maxAmount, TransactionContext transaction) {
 		long filled = super.insert(resource, maxAmount, transaction);
-
-		if (filled <= 0) return filled;
-
 		Fluid fluid = resource.getFluid();
 
-		// FIX: Removed .get() because these are 'Source' types
+		if (maxAmount <= 0) return filled;
+
 		boolean isExp = fluid.isSame(CeiFluids.EXPERIENCE) ||
 				fluid.isSame(CeiFluids.HYPER_EXPERIENCE);
 
@@ -35,27 +33,28 @@ public abstract class OpenEndFluidHandlerMixin extends FluidTank {
 			transaction.addCloseCallback((context, result) -> {
 				if (result.wasCommitted()) {
 					try {
-						// Access the outer OpenEndedPipe class via the Accessor
+						// This now works because the Accessor is registered in the mixins.json
 						OpenEndFluidHandlerAccessor accessor = (OpenEndFluidHandlerAccessor) this;
 						OpenEndedPipe pipeInstance = accessor.getPipe();
 
 						if (pipeInstance != null) {
 							Level level = pipeInstance.getWorld();
 							if (level instanceof ServerLevel serverLevel) {
-								// Execute the spill logic (XP spawning/Enchanting)
 								ExperienceFluid.handleSpill(
 										serverLevel,
-										pipeInstance.getPos(),
-										(int) filled,
+										pipeInstance.getOutputPos(),
+										(int) maxAmount,
 										fluid
 								);
 							}
 						}
-					} catch (Exception e) {
-						e.printStackTrace();
+					} catch (Throwable t) {
+						System.err.println("[CEI] Failed to handle XP spill from Open Ended Pipe:");
+						t.printStackTrace();
 					}
 				}
 			});
+			return maxAmount;
 		}
 
 		return filled;

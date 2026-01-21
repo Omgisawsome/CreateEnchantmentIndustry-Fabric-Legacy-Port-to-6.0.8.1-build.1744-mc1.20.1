@@ -5,12 +5,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.alchemy.PotionUtils;
-import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.HitResult;
 import plus.dragons.createenchantmentindustry.entry.CeiEntityTypes;
-import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 import plus.dragons.createenchantmentindustry.entry.CeiItems;
 
 public class HyperExperienceBottle extends ThrowableItemProjectile {
@@ -46,14 +43,16 @@ public class HyperExperienceBottle extends ThrowableItemProjectile {
 	protected void onHit(HitResult pResult) {
 		super.onHit(pResult);
 		if (this.level() instanceof ServerLevel serverLevel) {
-			serverLevel.levelEvent(2002, this.blockPosition(), PotionUtils.getColor(Potions.WATER));
+			// FIX: Changed color from water to Hyper Blue/Cyan (0x33FFFB)
+			// 2002 is the splash potion sound/particle event
+			serverLevel.levelEvent(2002, this.blockPosition(), 0x33FFFB);
 
-			int amount = 3 + this.level().random.nextInt(5) + this.level().random.nextInt(5);
+			// Base XP for a bottle is roughly 3-11. We multiply this by 10 for "Hyper"
+			int baseAmount = 3 + this.level().random.nextInt(5) + this.level().random.nextInt(5);
+			int hyperAmount = baseAmount * 10;
 
-			// FABRIC FIX: Access the drop logic via the CeiFluids entry directly.
-			// If the fluid instance itself doesn't have .drop(),
-			// we use the HyperExperienceFluid class directly.
-			HyperExperienceFluid.drop(serverLevel, this.position(), amount);
+			// Now triggers ExperienceFluid.drop(..., true) which spawns the blue orb entity
+			HyperExperienceFluid.drop(serverLevel, this.position(), hyperAmount);
 
 			this.discard();
 		}

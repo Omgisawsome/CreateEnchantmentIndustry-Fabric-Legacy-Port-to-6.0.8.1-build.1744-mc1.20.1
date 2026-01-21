@@ -1,7 +1,6 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.simibubi.create.content.kinetics.belt.transport.TransportedItemStack;
 import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
 import com.simibubi.create.foundation.blockEntity.renderer.SmartBlockEntityRenderer;
@@ -11,7 +10,6 @@ import dev.engine_room.flywheel.lib.transform.TransformStack;
 import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.Direction;
@@ -21,9 +19,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Random;
-
-// Path confirmed from your previous message
-import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.Disenchanting;
 
 public class DisenchanterRenderer extends SmartBlockEntityRenderer<DisenchanterBlockEntity> {
 	public DisenchanterRenderer(BlockEntityRendererProvider.Context context) {
@@ -114,15 +109,16 @@ public class DisenchanterRenderer extends SmartBlockEntityRenderer<DisenchanterB
 		FluidStack tankFluidStack = primaryTank.getRenderedFluid();
 		float level = primaryTank.getFluidLevel().getValue(partialTicks);
 
-		// Internal tank surface
-		if (!tankFluidStack.isEmpty() && level != 0) {
+		// Internal tank basin - Using renderFluidStream as a fallback
+		if (!tankFluidStack.isEmpty() && level > 0) {
 			float yMin = 5f / 16f;
-			float yOffset = (7f / 16f) * level;
+			float yOffset = (8f / 16f) * level;
 
 			ps.pushPose();
 			ps.translate(0.5f, yMin, 0.5f);
-			// Using a short upward stream to represent the fluid surface since Box is missing
-			FluidRenderer.renderFluidStream(tankFluidStack, Direction.UP, 6/16f, yOffset, false, buffer, ps, light);
+			// We use a Direction.UP stream with a very short length to create a "surface"
+			// We set the radius to ~6/16f to fill the basin width (2.01 to 13.99)
+			FluidRenderer.renderFluidStream(tankFluidStack, Direction.UP, 5.9f / 16f, yOffset, false, buffer, ps, light);
 			ps.popPose();
 		}
 
@@ -137,15 +133,11 @@ public class DisenchanterRenderer extends SmartBlockEntityRenderer<DisenchanterB
 		if (xp.isEmpty()) return;
 
 		float processingProgress = Mth.clamp(1 - (be.processingTicks - partialTicks - 5) / 10f, 0, 1);
-		float radius = 1/16f + (processingProgress * 1/16f);
+		float radius = 1/32f + (processingProgress * 1/32f);
 
 		ps.pushPose();
 		ps.translate(0.5, 13/16d, 0.5);
-
-		// CORRECTED Signature based on your error:
-		// (FluidStack, Direction, float radius, float length, boolean upsideDown, MultiBufferSource, PoseStack, int light)
-		FluidRenderer.renderFluidStream(xp, Direction.DOWN, radius, 6/16f, false, buffer, ps, light);
-
+		FluidRenderer.renderFluidStream(xp, Direction.DOWN, radius, 4/16f, false, buffer, ps, light);
 		ps.popPose();
 	}
 }

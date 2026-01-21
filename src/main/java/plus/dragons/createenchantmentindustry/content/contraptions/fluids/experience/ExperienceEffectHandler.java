@@ -1,7 +1,6 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.fluids.experience;
 
 import com.simibubi.create.content.fluids.OpenEndedPipe;
-
 import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -14,9 +13,6 @@ import plus.dragons.createenchantmentindustry.foundation.advancement.CeiAdvancem
 
 /**
  * Fabric / Create 6 compatible experience fluid effect handler.
- *
- * Ponder-only logic has been removed.
- * This handler now runs ONLY on the logical server.
  */
 public final class ExperienceEffectHandler {
 
@@ -25,6 +21,7 @@ public final class ExperienceEffectHandler {
 	}
 
 	public static void apply(OpenEndedPipe pipe, FluidStack fluidStack) {
+		// Use getWorld() for Fabric compatibility
 		if (!(pipe.getWorld() instanceof ServerLevel level))
 			return;
 
@@ -35,6 +32,8 @@ public final class ExperienceEffectHandler {
 		BlockPos pipePos = pipe.getPos();
 
 		Vec3 orbPos = Vec3.atCenterOf(outputPos);
+
+		// Calculate velocity based on pipe orientation
 		Vec3 speed = new Vec3(
 				outputPos.getX() - pipePos.getX(),
 				outputPos.getY() - pipePos.getY(),
@@ -46,11 +45,13 @@ public final class ExperienceEffectHandler {
 		AABB area = pipe.getAOE();
 		var players = level.getEntitiesOfClass(Player.class, area, LivingEntity::isAlive);
 
+		// No players found: drop orbs
 		if (players.isEmpty()) {
 			fluid.awardOrDrop(null, level, orbPos, speed, amount);
 			return;
 		}
 
+		// Players found: distribute XP directly
 		int perPlayer = amount / players.size();
 		int remainder = amount % players.size();
 
@@ -61,6 +62,7 @@ public final class ExperienceEffectHandler {
 			}
 		}
 
+		// Randomly give remainder to one of the players
 		if (remainder > 0) {
 			Player lucky = players.get(level.random.nextInt(players.size()));
 			fluid.awardOrDrop(lucky, level, orbPos, speed, remainder);

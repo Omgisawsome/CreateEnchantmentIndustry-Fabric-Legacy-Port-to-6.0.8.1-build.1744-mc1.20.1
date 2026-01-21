@@ -7,9 +7,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.material.Fluid;
-import org.jetbrains.annotations.Nullable;
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 import plus.dragons.createenchantmentindustry.content.contraptions.fluids.experience.ExperienceFluid;
 import plus.dragons.createenchantmentindustry.content.contraptions.fluids.experience.HyperExperienceFluid;
@@ -21,7 +19,6 @@ public class CeiFluids {
 	public static HyperExperienceFluid.Source HYPER_EXPERIENCE;
 	public static HyperExperienceFluid.Flowing FLOWING_HYPER_EXPERIENCE;
 
-	// Fixed: Ink needs its own Flowing variant to avoid tag errors
 	public static Fluid INK;
 	public static Fluid FLOWING_INK;
 
@@ -36,8 +33,6 @@ public class CeiFluids {
 		FLOWING_HYPER_EXPERIENCE = Registry.register(BuiltInRegistries.FLUID,
 				new ResourceLocation(EnchantmentIndustry.MOD_ID, "flowing_hyper_experience"), new HyperExperienceFluid.Flowing());
 
-		// Use Experience as a base for Ink if the Ink class isn't ready,
-		// but register them under unique IDs to satisfy the Recipe Manager.
 		INK = Registry.register(BuiltInRegistries.FLUID,
 				new ResourceLocation(EnchantmentIndustry.MOD_ID, "ink"), new ExperienceFluid.Source());
 		FLOWING_INK = Registry.register(BuiltInRegistries.FLUID,
@@ -61,8 +56,8 @@ public class CeiFluids {
 			return Component.translatable(translationKey);
 		}
 
-		public int getViscosity(FluidVariant variant, @Nullable LevelReader world) {
-			return 500;
-		}
+		// Note: Viscosity/Temperature are not part of the standard Fabric Attribute Handler interface
+		// in the same way they are on Forge. If you need custom viscosity, it is usually handled
+		// via tags or a custom Fluid API implementation.
 	}
 }

@@ -85,6 +85,7 @@ public class DisenchanterBlock extends Block
 			});
 		}
 
+		// Allow inserting items from the top
 		if (hit.getDirection() == Direction.UP) {
 			return onBlockEntityUse(level, pos, be -> {
 				if (be.getHeldItemStack().isEmpty()) {
@@ -108,7 +109,7 @@ public class DisenchanterBlock extends Block
 		return InteractionResult.PASS;
 	}
 
-	/* -------------------- SHAPE -------------------- */
+	/* -------------------- SHAPE & RENDERING -------------------- */
 
 	@Override
 	public VoxelShape getShape(
@@ -118,6 +119,23 @@ public class DisenchanterBlock extends Block
 			CollisionContext context
 	) {
 		return AllShapes.CASING_13PX.get(Direction.UP);
+	}
+
+	/**
+	 * FIX: Returning false allows the game to render the fluid inside the block.
+	 * If this is true, Minecraft skips rendering faces behind this block.
+	 */
+	@Override
+	public boolean propagatesSkylightDown(BlockState state, BlockGetter reader, BlockPos pos) {
+		return true;
+	}
+
+	/**
+	 * FIX: Ensures the block doesn't "black out" the fluid or internal textures.
+	 */
+	@Override
+	public boolean useShapeForLightOcclusion(BlockState state) {
+		return true;
 	}
 
 	/* -------------------- LIFECYCLE -------------------- */
@@ -130,7 +148,9 @@ public class DisenchanterBlock extends Block
 			BlockState newState,
 			boolean isMoving
 	) {
-		IBE.onRemove(state, level, pos, newState);
+		if (state.hasBlockEntity() && (!state.is(newState.getBlock()) || !newState.hasBlockEntity())) {
+			IBE.onRemove(state, level, pos, newState);
+		}
 	}
 
 	@Override
