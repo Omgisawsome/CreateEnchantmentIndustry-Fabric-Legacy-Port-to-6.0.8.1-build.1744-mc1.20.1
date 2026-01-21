@@ -12,7 +12,6 @@ import io.github.fabricators_of_create.porting_lib.transfer.TransferUtil;
 
 import org.jetbrains.annotations.Nullable;
 
-// Goggle Info Path for Build 1744
 import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.content.kinetics.belt.behaviour.DirectBeltInputBehaviour;
 import com.simibubi.create.content.kinetics.belt.transport.TransportedItemStack;
@@ -22,7 +21,6 @@ import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour
 import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
 import com.simibubi.create.foundation.utility.BlockHelper;
 
-// UPDATED: Use Mojang's Pair to match the Disenchanting class return type
 import com.mojang.datafixers.util.Pair;
 import net.createmod.catnip.data.Iterate;
 import net.createmod.catnip.math.VecHelper;
@@ -40,7 +38,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -250,7 +247,11 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 									inserted -= total;
 									player.giveExperiencePoints(-total);
 								}
-								CeiAdvancements.SPIRIT_TAKING.getTrigger().trigger((ServerPlayer) player);
+
+								// SAFETY CHECK FOR ADVANCEMENT TRIGGER
+								if (CeiAdvancements.SPIRIT_TAKING != null && CeiAdvancements.SPIRIT_TAKING.getTrigger() != null) {
+									CeiAdvancements.SPIRIT_TAKING.getTrigger().trigger((ServerPlayer) player);
+								}
 							} else if (inserted > 0) {
 								if (total >= inserted) {
 									player.giveExperiencePoints((int) -inserted);
@@ -260,7 +261,11 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 									player.giveExperiencePoints(-total);
 								}
 								absorbedXp = true;
-								CeiAdvancements.SPIRIT_TAKING.getTrigger().trigger((ServerPlayer) player);
+
+								// SAFETY CHECK FOR ADVANCEMENT TRIGGER
+								if (CeiAdvancements.SPIRIT_TAKING != null && CeiAdvancements.SPIRIT_TAKING.getTrigger() != null) {
+									CeiAdvancements.SPIRIT_TAKING.getTrigger().trigger((ServerPlayer) player);
+								}
 							} else {
 								break;
 							}
@@ -315,7 +320,6 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 		if(heldItem.stack.getCount() <= 0)
 			return false;
 
-		// Use Mojang's Pair result
 		Pair<FluidStack, ItemStack> result = Disenchanting.disenchantResult(heldItem.stack, level);
 		if (result == null)
 			return false;
@@ -342,7 +346,9 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 		var playerId = ((AdvancementBehaviourAccessor) advancementBehaviour).getPlayerId();
 		if (playerId != null) {
 			var player = level.getPlayerByUUID(playerId);
-			if(player != null)
+
+			// SAFETY CHECK FOR DISENCHANTED TRIGGER
+			if (player != null && CeiTriggers.DISENCHANTED != null)
 				CeiTriggers.DISENCHANTED.trigger(player, (int) totalXp);
 		}
 
