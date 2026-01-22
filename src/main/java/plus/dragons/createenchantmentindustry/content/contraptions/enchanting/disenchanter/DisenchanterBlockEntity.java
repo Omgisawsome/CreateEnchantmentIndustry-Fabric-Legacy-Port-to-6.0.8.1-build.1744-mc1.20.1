@@ -66,24 +66,6 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 	Map<Direction, DisenchanterItemHandler> itemHandlers;
 	AABB absorbArea;
 
-	SnapshotParticipant<TransportedItemStack> snapshotParticipant = new SnapshotParticipant<>() {
-		@Override
-		protected TransportedItemStack createSnapshot() {
-			return heldItem == null ? TransportedItemStack.EMPTY : heldItem.fullCopy();
-		}
-
-		@Override
-		protected void readSnapshot(TransportedItemStack snapshot) {
-			heldItem = snapshot == TransportedItemStack.EMPTY ? null : snapshot;
-		}
-
-		@Override
-		protected void onFinalCommit() {
-			// Syncs the item and fluid data to the client when a transaction completes
-			notifyUpdate();
-		}
-	};
-
 	public DisenchanterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
 		super(type, pos, state);
 		itemHandlers = new IdentityHashMap<>();
@@ -98,22 +80,25 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 		behaviours.add(new DirectBeltInputBehaviour(this).allowingBeltFunnels()
 				.setInsertionHandler(this::tryInsertingFromSide));
 
-		// FIX: Removed .whenContentsChanged builder as it doesn't exist in this version
 		internalTank = SmartFluidTankBehaviour.single(this, (long) CeiConfigs.SERVER.disenchanterTankCapacity.get() * UNIT_PER_MB)
 				.allowExtraction()
 				.forbidInsertion();
 
 		behaviours.add(internalTank);
-		internalTank.getPrimaryHandler().setValidator(fluidStack -> true);
+
+		// FIX: Removed .get() call as CeiFluids.EXPERIENCE is accessed directly
+		internalTank.getPrimaryHandler().setValidator(fluidStack ->
+				fluidStack.getFluid().isSame(CeiFluids.EXPERIENCE.getSource()));
+
 		registerAwardables(behaviours,
 				CeiAdvancements.EXPERIMENTAL.asCreateAdvancement(),
-				CeiAdvancements.GONE_WITH_THE_FOIL.asCreateAdvancement());
+				CeiAdvancements.GONE_WITH_THE_FOIL.asCreateAdvancement(),
+				CeiAdvancements.SPIRIT_TAKING.asCreateAdvancement());
 	}
 
 	@Override
 	public void tick() {
 		super.tick();
-
 		boolean onClient = level.isClientSide && !isVirtual();
 
 		if (!onClient && level.getGameTime() % 10 == 0) {
@@ -140,138 +125,94 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 
 		heldItem.prevBeltPosition = heldItem.beltPosition;
 		heldItem.prevSideOffset = heldItem.sideOffset;
-
 		heldItem.beltPosition += itemMovementPerTick();
+
 		if (heldItem.beltPosition > 1) {
 			heldItem.beltPosition = 1;
-
-			if (onClient)
-				return;
+			if (onClient) return;
 
 			Direction side = heldItem.insertedFrom;
-
 			ItemStack tryExportingToBeltFunnel = getBehaviour(DirectBeltInputBehaviour.TYPE)
 					.tryExportingToBeltFunnel(heldItem.stack, side.getOpposite(), false);
+
 			if (tryExportingToBeltFunnel != null) {
 				if (tryExportingToBeltFunnel.getCount() != heldItem.stack.getCount()) {
-					if (tryExportingToBeltFunnel.isEmpty())
-						heldItem = null;
-					else
-						heldItem.stack = tryExportingToBeltFunnel;
+					if (tryExportingToBeltFunnel.isEmpty()) heldItem = null;
+					else heldItem.stack = tryExportingToBeltFunnel;
 					notifyUpdate();
 					return;
 				}
-				if (!tryExportingToBeltFunnel.isEmpty())
-					return;
+				if (!tryExportingToBeltFunnel.isEmpty()) return;
 			}
 
 			BlockPos nextPosition = worldPosition.relative(side);
-			DirectBeltInputBehaviour directBeltInputBehaviour =
-					BlockEntityBehaviour.get(level, nextPosition, DirectBeltInputBehaviour.TYPE);
+			DirectBeltInputBehaviour directBeltInputBehaviour = BlockEntityBehaviour.get(level, nextPosition, DirectBeltInputBehaviour.TYPE);
 			if (directBeltInputBehaviour == null) {
-				if (!BlockHelper.hasBlockSolidSide(level.getBlockState(nextPosition), level, nextPosition,
-						side.getOpposite())) {
+				if (!BlockHelper.hasBlockSolidSide(level.getBlockState(nextPosition), level, nextPosition, side.getOpposite())) {
 					ItemStack ejected = heldItem.stack;
-					Vec3 outPos = VecHelper.getCenterOf(worldPosition)
-							.add(Vec3.atLowerCornerOf(side.getNormal())
-									.scale(.75));
-					float movementSpeed = itemMovementPerTick();
-					Vec3 outMotion = Vec3.atLowerCornerOf(side.getNormal())
-							.scale(movementSpeed)
-							.add(0, 1 / 8f, 0);
+					Vec3 outPos = VecHelper.getCenterOf(worldPosition).add(Vec3.atLowerCornerOf(side.getNormal()).scale(.75));
 					ItemEntity entity = new ItemEntity(level, outPos.x, outPos.y + 6 / 16f, outPos.z, ejected);
-					entity.setDeltaMovement(outMotion);
+					entity.setDeltaMovement(Vec3.atLowerCornerOf(side.getNormal()).scale(itemMovementPerTick()).add(0, 1 / 8f, 0));
 					entity.setDefaultPickUpDelay();
-					entity.hurtMarked = true;
 					level.addFreshEntity(entity);
-
 					heldItem = null;
 					notifyUpdate();
 				}
 				return;
 			}
 
-			if (!directBeltInputBehaviour.canInsertFromSide(side))
-				return;
-
+			if (!directBeltInputBehaviour.canInsertFromSide(side)) return;
 			ItemStack returned = directBeltInputBehaviour.handleInsertion(heldItem.copy(), side, false);
 
-			if (returned.isEmpty()) {
-				heldItem = null;
+			if (returned.isEmpty() || returned.getCount() != heldItem.stack.getCount()) {
+				heldItem = returned.isEmpty() ? null : heldItem;
+				if (heldItem != null) heldItem.stack = returned;
 				notifyUpdate();
 				return;
 			}
-
-			if (returned.getCount() != heldItem.stack.getCount()) {
-				heldItem.stack = returned;
-				notifyUpdate();
-				return;
-			}
-
 			return;
 		}
 
 		if (heldItem.prevBeltPosition < .5f && heldItem.beltPosition >= .5f) {
-			if (Disenchanting.disenchantResult(heldItem.stack.copy(), level) == null)
-				return;
+			if (Disenchanting.disenchantResult(heldItem.stack.copy(), level) == null) return;
 			heldItem.beltPosition = .5f;
-			if (onClient)
-				return;
+			if (onClient) return;
 			processingTicks = DISENCHANTER_TIME;
-			sendData(); // Syncs processing state to client
+			sendData();
 		}
 	}
 
 	protected void absorbExperienceFromWorld() {
 		boolean absorbedXp = false;
 		List<Player> players = level.getEntitiesOfClass(Player.class, absorbArea, LivingEntity::isAlive);
+
 		if (!players.isEmpty()) {
 			AtomicInteger sum = new AtomicInteger();
 			players.forEach(player -> {
 				int exp = getPlayerExperience(player);
-				if (exp >= ABSORB_AMOUNT) {
-					sum.addAndGet(ABSORB_AMOUNT);
-				} else if (exp != 0) {
-					sum.addAndGet(exp);
-				}
+				if (exp > 0) sum.addAndGet(Math.min(exp, ABSORB_AMOUNT));
 			});
+
 			if (sum.get() != 0) {
-				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE, (long) sum.get() * UNIT_PER_MB);
+				// FIX: Removed .get() call
+				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE.getSource(), (long) sum.get() * UNIT_PER_MB);
 				try(Transaction t = TransferUtil.getTransaction()){
 					internalTank.allowInsertion();
-					var inserted = internalTank.getPrimaryHandler().insert(fluidStack.getType(), fluidStack.getAmount(), t) / UNIT_PER_MB;
+					long inserted = internalTank.getPrimaryHandler().insert(FluidVariant.of(fluidStack.getFluid()), fluidStack.getAmount(), t);
 					t.commit();
-					if (inserted != 0) {
+
+					int mbInserted = (int) (inserted / UNIT_PER_MB);
+					if (mbInserted != 0) {
 						absorbedXp = true;
 						for (var player : players) {
-							var total = getPlayerExperience(player);
-							if (inserted >= ABSORB_AMOUNT) {
-								if (total >= ABSORB_AMOUNT) {
-									player.giveExperiencePoints(-ABSORB_AMOUNT);
-									inserted -= ABSORB_AMOUNT;
-								} else if (total != 0) {
-									inserted -= total;
-									player.giveExperiencePoints(-total);
-								}
-
-								if (CeiAdvancements.SPIRIT_TAKING != null && CeiAdvancements.SPIRIT_TAKING.getTrigger() != null) {
-									CeiAdvancements.SPIRIT_TAKING.getTrigger().trigger((ServerPlayer) player);
-								}
-							} else if (inserted > 0) {
-								if (total >= inserted) {
-									player.giveExperiencePoints((int) -inserted);
-									inserted = 0;
-								} else {
-									inserted -= total;
-									player.giveExperiencePoints(-total);
-								}
-
-								if (CeiAdvancements.SPIRIT_TAKING != null && CeiAdvancements.SPIRIT_TAKING.getTrigger() != null) {
-									CeiAdvancements.SPIRIT_TAKING.getTrigger().trigger((ServerPlayer) player);
-								}
-							} else {
-								break;
+							int playerTotal = getPlayerExperience(player);
+							int toExtract = Math.min(playerTotal, Math.min(mbInserted, ABSORB_AMOUNT));
+							if (toExtract > 0) {
+								player.giveExperiencePoints(-toExtract);
+								mbInserted -= toExtract;
+								CeiTriggers.SPIRIT_TAKING.trigger((ServerPlayer) player);
 							}
+							if (mbInserted <= 0) break;
 						}
 					}
 					internalTank.forbidInsertion();
@@ -284,58 +225,51 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 			internalTank.allowInsertion();
 			for (var orb : experienceOrbs) {
 				var amount = orb.value;
-				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE, (long) amount * UNIT_PER_MB);
+				// FIX: Removed .get() call
+				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE.getSource(), (long) amount * UNIT_PER_MB);
 				try(Transaction t = TransferUtil.getTransaction()) {
-					var inserted = internalTank.getPrimaryHandler().insert(fluidStack.getType(), fluidStack.getAmount(), t) / UNIT_PER_MB;
+					long inserted = internalTank.getPrimaryHandler().insert(FluidVariant.of(fluidStack.getFluid()), fluidStack.getAmount(), t);
 					t.commit();
-					if (inserted == amount) {
+					if (inserted >= fluidStack.getAmount()) {
 						absorbedXp = true;
 						orb.discard();
-					} else {
-						if (inserted != 0) {
-							absorbedXp = true;
-							orb.value -= (int) inserted;
-						}
+					} else if (inserted > 0) {
+						absorbedXp = true;
+						orb.value -= (int) (inserted / UNIT_PER_MB);
 						break;
 					}
 				}
 			}
 			internalTank.forbidInsertion();
 		}
+
 		if (absorbedXp) {
 			award(CeiAdvancements.EXPERIMENTAL.asCreateAdvancement());
-			sendData(); // Syncs the new fluid levels to the renderer
+			sendData();
 		}
 	}
 
 	private int getPlayerExperience(Player player) {
-		var level = player.experienceLevel;
-		if (player.experienceLevel == 0 && player.experienceProgress == 0)
-			return 0;
-		var total = Enchanting.expPointFromLevel(level);
-		var bar = (int) (total + player.experienceProgress * player.getXpNeededForNextLevel());
-		return Math.max(bar, 1);
+		if (player.experienceLevel == 0 && player.experienceProgress == 0) return 0;
+		int total = Enchanting.expPointFromLevel(player.experienceLevel);
+		return total + Math.round(player.experienceProgress * player.getXpNeededForNextLevel());
 	}
 
 	protected boolean continueProcessing() {
-		if (level.isClientSide && !isVirtual())
-			return true;
-		if (processingTicks < 5)
-			return true;
-		if(heldItem.stack.getCount() <= 0)
-			return false;
+		if (level.isClientSide && !isVirtual()) return true;
+		if (processingTicks < 5 || heldItem.stack.getCount() <= 0) return processingTicks >= 5;
 
 		Pair<FluidStack, ItemStack> result = Disenchanting.disenchantResult(heldItem.stack, level);
-		if (result == null)
-			return false;
+		if (result == null) return false;
 
-		FluidStack xp = result.getFirst();
-		long totalXp = xp.getAmount() * heldItem.stack.getCount();
+		// FORCE: Convert result to Standard Experience Fluid and FIX: removed .get()
+		FluidStack resultFluid = result.getFirst();
+		FluidStack xpToStore = new FluidStack(CeiFluids.EXPERIENCE.getSource(), resultFluid.getAmount() * heldItem.stack.getCount());
 
 		if (processingTicks > 5) {
 			try(Transaction t = TransferUtil.getTransaction()) {
 				internalTank.allowInsertion();
-				if (internalTank.getPrimaryHandler().insert(xp.getType(), totalXp, t) != totalXp) {
+				if (internalTank.getPrimaryHandler().insert(FluidVariant.of(xpToStore.getFluid()), xpToStore.getAmount(), t) != xpToStore.getAmount()) {
 					internalTank.forbidInsertion();
 					processingTicks = DISENCHANTER_TIME;
 					return true;
@@ -347,49 +281,41 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 
 		award(CeiAdvancements.EXPERIMENTAL.asCreateAdvancement());
 		award(CeiAdvancements.GONE_WITH_THE_FOIL.asCreateAdvancement());
+
 		var advancementBehaviour = getBehaviour(AdvancementBehaviour.TYPE);
 		var playerId = ((AdvancementBehaviourAccessor) advancementBehaviour).getPlayerId();
-		if (playerId != null) {
-			var player = level.getPlayerByUUID(playerId);
-
-			if (player != null && CeiTriggers.DISENCHANTED != null)
-				CeiTriggers.DISENCHANTED.trigger(player, (int) totalXp);
+		if (playerId != null && level.getPlayerByUUID(playerId) instanceof ServerPlayer sp) {
+			CeiTriggers.DISENCHANTED.trigger(sp, (int) (xpToStore.getAmount() / UNIT_PER_MB));
 		}
 
-		var resultItem = result.getSecond();
+		ItemStack resultItem = result.getSecond();
 		resultItem.setCount(heldItem.stack.getCount());
 		heldItem.stack = resultItem;
 
 		try(Transaction t = TransferUtil.getTransaction()) {
 			internalTank.allowInsertion();
-			internalTank.getPrimaryHandler().insert(xp.getType(), totalXp, t);
+			internalTank.getPrimaryHandler().insert(FluidVariant.of(xpToStore.getFluid()), xpToStore.getAmount(), t);
 			t.commit();
 			internalTank.forbidInsertion();
 		}
+
 		level.levelEvent(1042, worldPosition, 0);
 		notifyUpdate();
 		return true;
 	}
 
-	private float itemMovementPerTick() {
-		return 1 / 8f;
-	}
+	private float itemMovementPerTick() { return 1 / 8f; }
 
-	public SmartFluidTankBehaviour getInternalTank() {
-		return internalTank;
-	}
+	public SmartFluidTankBehaviour getInternalTank() { return internalTank; }
 
 	private ItemStack tryInsertingFromSide(TransportedItemStack transportedStack, Direction side, boolean simulate) {
-		ItemStack inserted = transportedStack.stack;
-		ItemStack returned = ItemStack.EMPTY;
-
-		if (!getHeldItemStack().isEmpty())
-			return inserted;
+		if (!getHeldItemStack().isEmpty()) return transportedStack.stack;
 
 		ItemStack disenchanted = Disenchanting.disenchantAndInsert(this, transportedStack.stack, simulate);
-		if (!ItemStack.matches(transportedStack.stack, disenchanted)) {
-			return disenchanted;
-		}
+		if (!ItemStack.matches(transportedStack.stack, disenchanted)) return disenchanted;
+
+		ItemStack inserted = transportedStack.stack.copy();
+		ItemStack returned = ItemStack.EMPTY;
 
 		if (inserted.getCount() > 1 && Disenchanting.disenchantResult(inserted, level) != null) {
 			returned = inserted.copy();
@@ -397,11 +323,10 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 			inserted.setCount(1);
 		}
 
-		if (simulate)
-			return returned;
+		if (simulate) return returned;
 
 		transportedStack = transportedStack.copy();
-		transportedStack.stack = inserted.copy();
+		transportedStack.stack = inserted;
 		transportedStack.beltPosition = side.getAxis().isVertical() ? .5f : 0;
 		transportedStack.prevSideOffset = transportedStack.sideOffset;
 		transportedStack.prevBeltPosition = transportedStack.beltPosition;
@@ -412,9 +337,7 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 		return returned;
 	}
 
-	public ItemStack getHeldItemStack() {
-		return heldItem == null ? ItemStack.EMPTY : heldItem.stack;
-	}
+	public ItemStack getHeldItemStack() { return heldItem == null ? ItemStack.EMPTY : heldItem.stack; }
 
 	public void setHeldItem(TransportedItemStack heldItem, Direction insertedFrom) {
 		this.heldItem = heldItem;
@@ -425,15 +348,12 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 	public void destroy() {
 		super.destroy();
 		if (level instanceof ServerLevel serverLevel) {
-			ItemStack heldItemStack = getHeldItemStack();
-			if(!heldItemStack.isEmpty())
-				Containers.dropItemStack(level, getBlockPos().getX(), getBlockPos().getY(), getBlockPos().getZ(), heldItemStack);
+			if(!getHeldItemStack().isEmpty())
+				Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), getHeldItemStack());
 
-			var tank = getInternalTank().getPrimaryHandler();
-			var fluidStack = tank.getFluid();
-
-			if(fluidStack.getFluid() instanceof ExperienceFluid) {
-				ExperienceFluid.drop(serverLevel, VecHelper.getCenterOf(getBlockPos()), (int) (fluidStack.getAmount() / UNIT_PER_MB));
+			var fluidStack = internalTank.getPrimaryHandler().getFluid();
+			if(!fluidStack.isEmpty()) {
+				ExperienceFluid.drop(serverLevel, VecHelper.getCenterOf(worldPosition), (int) (fluidStack.getAmount() / UNIT_PER_MB));
 			}
 		}
 	}
@@ -441,17 +361,14 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 	@Override
 	public void write(CompoundTag compoundTag, boolean clientPacket) {
 		compoundTag.putInt("ProcessingTicks", processingTicks);
-		if (heldItem != null)
-			compoundTag.put("HeldItem", heldItem.serializeNBT());
+		if (heldItem != null) compoundTag.put("HeldItem", heldItem.serializeNBT());
 		super.write(compoundTag, clientPacket);
 	}
 
 	@Override
 	protected void read(CompoundTag compoundTag, boolean clientPacket) {
-		heldItem = null;
 		processingTicks = compoundTag.getInt("ProcessingTicks");
-		if (compoundTag.contains("HeldItem"))
-			heldItem = TransportedItemStack.read(compoundTag.getCompound("HeldItem"));
+		heldItem = compoundTag.contains("HeldItem") ? TransportedItemStack.read(compoundTag.getCompound("HeldItem")) : null;
 		super.read(compoundTag, clientPacket);
 	}
 
@@ -462,15 +379,11 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 
 	@Override
 	public @Nullable Storage<FluidVariant> getFluidStorage(Direction side) {
-		if(side != Direction.UP)
-			return internalTank.getCapability();
-		return null;
+		return side != Direction.UP ? internalTank.getCapability() : null;
 	}
 
 	@Override
 	public @Nullable Storage<ItemVariant> getItemStorage(Direction side) {
-		if (side != null && side.getAxis().isHorizontal())
-			return itemHandlers.get(side);
-		return null;
+		return (side != null && side.getAxis().isHorizontal()) ? itemHandlers.get(side) : null;
 	}
 }

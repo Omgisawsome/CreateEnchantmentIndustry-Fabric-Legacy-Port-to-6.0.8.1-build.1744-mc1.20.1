@@ -17,6 +17,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 
 import java.util.Random;
 
@@ -109,16 +110,16 @@ public class DisenchanterRenderer extends SmartBlockEntityRenderer<DisenchanterB
 		FluidStack tankFluidStack = primaryTank.getRenderedFluid();
 		float level = primaryTank.getFluidLevel().getValue(partialTicks);
 
-		// Internal tank basin - Using renderFluidStream as a fallback
+		// Internal tank basin - Forced to standard Experience color (Green)
 		if (!tankFluidStack.isEmpty() && level > 0) {
-			float yMin = 5f / 16f;
-			float yOffset = (8f / 16f) * level;
+			float yMin = 5.2f / 16f;
+			float yOffset = (7.8f / 16f) * level;
 
 			ps.pushPose();
 			ps.translate(0.5f, yMin, 0.5f);
-			// We use a Direction.UP stream with a very short length to create a "surface"
-			// We set the radius to ~6/16f to fill the basin width (2.01 to 13.99)
-			FluidRenderer.renderFluidStream(tankFluidStack, Direction.UP, 5.9f / 16f, yOffset, false, buffer, ps, light);
+			// FIX: Removed .get() call
+			FluidStack visualXp = new FluidStack(CeiFluids.EXPERIENCE.getSource(), tankFluidStack.getAmount());
+			FluidRenderer.renderFluidStream(visualXp, Direction.UP, 5.8f / 16f, yOffset, false, buffer, ps, light);
 			ps.popPose();
 		}
 
@@ -132,12 +133,16 @@ public class DisenchanterRenderer extends SmartBlockEntityRenderer<DisenchanterB
 		FluidStack xp = result.getFirst();
 		if (xp.isEmpty()) return;
 
+		// Falling stream - Forced to standard Experience color (Green)
+		// FIX: Removed .get() call
+		FluidStack visualFallingXp = new FluidStack(CeiFluids.EXPERIENCE.getSource(), xp.getAmount());
+
 		float processingProgress = Mth.clamp(1 - (be.processingTicks - partialTicks - 5) / 10f, 0, 1);
 		float radius = 1/32f + (processingProgress * 1/32f);
 
 		ps.pushPose();
 		ps.translate(0.5, 13/16d, 0.5);
-		FluidRenderer.renderFluidStream(xp, Direction.DOWN, radius, 4/16f, false, buffer, ps, light);
+		FluidRenderer.renderFluidStream(visualFallingXp, Direction.DOWN, radius, 4/16f, false, buffer, ps, light);
 		ps.popPose();
 	}
 }

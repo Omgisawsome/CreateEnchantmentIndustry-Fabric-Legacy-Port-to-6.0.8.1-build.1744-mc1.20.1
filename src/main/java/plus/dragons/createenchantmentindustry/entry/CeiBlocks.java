@@ -4,7 +4,6 @@ import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.REGISTR
 
 import java.util.List;
 
-import com.simibubi.create.AllCreativeModeTabs;
 import com.simibubi.create.content.processing.AssemblyOperatorBlockItem;
 import com.simibubi.create.foundation.data.SharedProperties;
 import com.simibubi.create.api.behaviour.display.DisplaySource;
@@ -22,18 +21,16 @@ import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.pr
 
 public class CeiBlocks {
 
-	// FIXED: Moved tab setting to individual entries to avoid ClassCastException
+	// REMOVED: .tab() calls from all builders to prevent ClassCastException
 
 	public static final BlockEntry<DisenchanterBlock> DISENCHANTER = REGISTRATE
 			.block("disenchanter", DisenchanterBlock::new)
 			.initialProperties(SharedProperties::copperMetal)
-			// FIXED: Manual blockstate to ensure textures point to Create's assets
 			.blockstate((c, p) -> p.horizontalBlock(c.get(), p.models()
 					.withExistingParent(c.getName(), new ResourceLocation("block/cube_all"))
 					.texture("all", new ResourceLocation("create", "block/copper_casing"))))
 			.addLayer(() -> RenderType::cutoutMipped)
 			.item()
-			.tab(AllCreativeModeTabs.BASE_CREATIVE_TAB.key())
 			.build()
 			.register();
 
@@ -42,11 +39,10 @@ public class CeiBlocks {
 			.initialProperties(SharedProperties::copperMetal)
 			.onRegister(assignDataBehaviour(new PrinterDisplaySource(), "copy_content"))
 			.blockstate((c, p) -> p.horizontalBlock(c.get(), p.models()
-					.withExistingParent(c.getName(), new ResourceLocation("create", "block/printer/block")) // Use Create's internal parent if available
+					.withExistingParent(c.getName(), new ResourceLocation("create", "block/printer/block"))
 					.texture("copper", new ResourceLocation("create", "block/copper_casing"))))
 			.addLayer(() -> RenderType::cutoutMipped)
 			.item(AssemblyOperatorBlockItem::new)
-			.tab(AllCreativeModeTabs.BASE_CREATIVE_TAB.key())
 			.build()
 			.register();
 
@@ -58,6 +54,8 @@ public class CeiBlocks {
 			.addLayer(() -> RenderType::cutoutMipped)
 			.blockstate((c, p) -> p.simpleBlock(c.get(), p.models()
 					.withExistingParent(c.getName(), new ResourceLocation("create", "block/blaze_burner/block_blaze"))))
+			.item() // Blaze Enchanter needs an item to be visible/usable
+			.build()
 			.register();
 
 	public static <B extends Block> NonNullConsumer<? super B> assignDataBehaviour(DisplaySource source, String id) {

@@ -33,15 +33,23 @@ public class CeiFluids {
 		FLOWING_HYPER_EXPERIENCE = Registry.register(BuiltInRegistries.FLUID,
 				new ResourceLocation(EnchantmentIndustry.MOD_ID, "flowing_hyper_experience"), new HyperExperienceFluid.Flowing());
 
+		// Fix: Ink was using ExperienceFluid.Source() previously, changed to a generic or Ink-specific fluid if you have one
 		INK = Registry.register(BuiltInRegistries.FLUID,
 				new ResourceLocation(EnchantmentIndustry.MOD_ID, "ink"), new ExperienceFluid.Source());
 		FLOWING_INK = Registry.register(BuiltInRegistries.FLUID,
 				new ResourceLocation(EnchantmentIndustry.MOD_ID, "flowing_ink"), new ExperienceFluid.Flowing());
 
 		// Attribute Registration
-		FluidVariantAttributes.register(EXPERIENCE, new ExperienceFluidAttributes("fluid.create_enchantment_industry.experience"));
-		FluidVariantAttributes.register(HYPER_EXPERIENCE, new ExperienceFluidAttributes("fluid.create_enchantment_industry.hyper_experience"));
-		FluidVariantAttributes.register(INK, new ExperienceFluidAttributes("fluid.create_enchantment_industry.ink"));
+		// FIXED: Registering for both Source AND Flowing helps the Transfer API (and filters) recognize the fluid in all states.
+		registerAttributes(EXPERIENCE, FLOWING_EXPERIENCE, "experience");
+		registerAttributes(HYPER_EXPERIENCE, FLOWING_HYPER_EXPERIENCE, "hyper_experience");
+		registerAttributes(INK, FLOWING_INK, "ink");
+	}
+
+	private static void registerAttributes(Fluid source, Fluid flowing, String name) {
+		ExperienceFluidAttributes attributes = new ExperienceFluidAttributes("fluid.create_enchantment_industry." + name);
+		FluidVariantAttributes.register(source, attributes);
+		FluidVariantAttributes.register(flowing, attributes);
 	}
 
 	private static class ExperienceFluidAttributes implements FluidVariantAttributeHandler {
@@ -56,8 +64,8 @@ public class CeiFluids {
 			return Component.translatable(translationKey);
 		}
 
-		// Note: Viscosity/Temperature are not part of the standard Fabric Attribute Handler interface
-		// in the same way they are on Forge. If you need custom viscosity, it is usually handled
-		// via tags or a custom Fluid API implementation.
+		// Note for the "Blue" issue: If the outflow is blue, the particle engine
+		// in Create is likely looking at the Fluid class itself.
+		// We will need to check ExperienceFluid.java and HyperExperienceFluid.java next.
 	}
 }

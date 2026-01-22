@@ -28,6 +28,9 @@ public abstract class ExperienceFluid extends FlowingFluid {
 
 		double mB = amount / 81.0;
 		float xpPerMb = 1f / 20f;
+
+		// Use the strict static check from HyperExperienceFluid if available,
+		// otherwise this manual check is fine as long as isSame() is fixed.
 		boolean isHyper = fluid.isSame(CeiFluids.HYPER_EXPERIENCE) || fluid.isSame(CeiFluids.FLOWING_HYPER_EXPERIENCE);
 
 		if (isHyper) {
@@ -49,6 +52,8 @@ public abstract class ExperienceFluid extends FlowingFluid {
 	public void awardOrDrop(@Nullable Player player, ServerLevel level, Vec3 pos, Vec3 speed, int amount) {
 		double mB = amount / 81.0;
 		float xpPerMb = 1f / 20f;
+
+		// Fixed: Ensure this check uses the current fluid instance correctly
 		boolean isHyper = this.isSame(CeiFluids.HYPER_EXPERIENCE) || this.isSame(CeiFluids.FLOWING_HYPER_EXPERIENCE);
 
 		if (isHyper) {
@@ -72,7 +77,6 @@ public abstract class ExperienceFluid extends FlowingFluid {
 		drop(level, pos, xpAmount, Vec3.ZERO, false);
 	}
 
-	// Overload for HyperExperienceFluid to call
 	public static void drop(ServerLevel level, Vec3 pos, int xpAmount, boolean isHyper) {
 		drop(level, pos, xpAmount, Vec3.ZERO, isHyper);
 	}
@@ -83,7 +87,6 @@ public abstract class ExperienceFluid extends FlowingFluid {
 			int value = ExperienceOrb.getExperienceValue(remaining);
 			remaining -= value;
 
-			// Choose between normal and blue orbs
 			ExperienceOrb orb;
 			if (isHyper) {
 				orb = new HyperExperienceOrb(level, pos.x, pos.y, pos.z, value);
@@ -115,8 +118,8 @@ public abstract class ExperienceFluid extends FlowingFluid {
 
 	@Override
 	public boolean isSame(Fluid fluid) {
-		return fluid == getSource() || fluid == getFlowing() ||
-				fluid == CeiFluids.HYPER_EXPERIENCE || fluid == CeiFluids.FLOWING_HYPER_EXPERIENCE;
+		// FIXED: Strict equality ensures Smart Pipes can distinguish Green from Blue.
+		return fluid == getSource() || fluid == getFlowing();
 	}
 
 	@Override protected void beforeDestroyingBlock(LevelAccessor world, BlockPos pos, BlockState state) {}

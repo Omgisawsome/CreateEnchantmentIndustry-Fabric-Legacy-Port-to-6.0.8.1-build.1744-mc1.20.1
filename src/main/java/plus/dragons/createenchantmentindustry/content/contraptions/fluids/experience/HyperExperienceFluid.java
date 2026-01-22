@@ -21,8 +21,14 @@ import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 
 public abstract class HyperExperienceFluid extends FlowingFluid {
 
+	/**
+	 * Helper to check if a fluid is Hyper Experience (Source or Flowing)
+	 */
+	public static boolean is(Fluid fluid) {
+		return fluid == CeiFluids.HYPER_EXPERIENCE || fluid == CeiFluids.FLOWING_HYPER_EXPERIENCE;
+	}
+
 	public static void drop(ServerLevel level, Vec3 pos, int xpAmount) {
-		// Updated to call the isHyper version
 		ExperienceFluid.drop(level, pos, xpAmount, true);
 	}
 
@@ -39,7 +45,6 @@ public abstract class HyperExperienceFluid extends FlowingFluid {
 		if (player != null) {
 			player.giveExperiencePoints(xpAmount);
 		} else {
-			// Updated to call the isHyper version with speed
 			ExperienceFluid.drop(level, pos, xpAmount, speed, true);
 		}
 	}
@@ -55,7 +60,13 @@ public abstract class HyperExperienceFluid extends FlowingFluid {
 	@Override protected int getDropOff(LevelReader world) { return 1; }
 	@Override public Item getBucket() { return Items.AIR; }
 	@Override protected BlockState createLegacyBlock(FluidState state) { return Blocks.AIR.defaultBlockState(); }
-	@Override public boolean isSame(Fluid fluid) { return fluid == getSource() || fluid == getFlowing(); }
+
+	@Override
+	public boolean isSame(Fluid fluid) {
+		// STRICT ISOLATION: This prevents filters from confusing Blue XP with Green XP
+		return fluid == getSource() || fluid == getFlowing();
+	}
+
 	@Override protected void beforeDestroyingBlock(LevelAccessor world, BlockPos pos, BlockState state) {}
 
 	public static class Source extends HyperExperienceFluid {
