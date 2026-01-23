@@ -4,7 +4,6 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import com.simibubi.create.content.processing.burner.BlazeBurnerBlock;
-import com.simibubi.create.content.processing.burner.BlazeBurnerBlockEntity;
 import com.simibubi.create.foundation.advancement.AdvancementBehaviour;
 
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
@@ -53,10 +52,8 @@ public class EnchantingGuideItem extends Item implements ExtendedScreenHandlerFa
 				var blockPos = pContext.getClickedPos();
 				var blockState = level.getBlockState(blockPos);
 
-				// Transform Blaze Burner into Blaze Enchanter
 				if (blockState.getBlock() instanceof BlazeBurnerBlock) {
 					if (!level.isClientSide()) {
-						// Maintain rotation of the burner
 						level.setBlockAndUpdate(blockPos, CeiBlocks.BLAZE_ENCHANTER.getDefaultState()
 								.setValue(BlazeEnchanterBlock.FACING, blockState.getValue(BlazeBurnerBlock.FACING))
 						);
@@ -83,10 +80,8 @@ public class EnchantingGuideItem extends Item implements ExtendedScreenHandlerFa
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
 		ItemStack heldItem = player.getItemInHand(hand);
-		// Only open GUI if not sneaking and using main hand
 		if (!player.isShiftKeyDown() && hand == InteractionHand.MAIN_HAND) {
 			if (!world.isClientSide && player instanceof ServerPlayer serverPlayer) {
-				// Fabric's way to open the menu with the factory
 				serverPlayer.openMenu(this);
 			}
 			return InteractionResultHolder.success(heldItem);
@@ -96,18 +91,21 @@ public class EnchantingGuideItem extends Item implements ExtendedScreenHandlerFa
 
 	@Override
 	public void writeScreenOpeningData(ServerPlayer player, FriendlyByteBuf buf) {
-		// This MUST match what EnchantingGuideMenu expects in its client-side constructor
+		// CRITICAL FIX: Match the order expected by EnchantingGuideMenu(type, id, inv, buf)
+		// 1. Boolean (directItemStackEdit)
+		// 2. ItemStack (createOnClient reads this)
+		buf.writeBoolean(true);
 		buf.writeItem(player.getItemInHand(InteractionHand.MAIN_HAND));
-		buf.writeBoolean(true); // Signifies it's from an Item, not a BlockEntity
 	}
 
 	@Override
 	public void appendHoverText(ItemStack pStack, @Nullable Level pLevel, List<Component> pTooltipComponents, TooltipFlag pIsAdvanced) {
 		super.appendHoverText(pStack, pLevel, pTooltipComponents, pIsAdvanced);
-		pTooltipComponents.add(Component.translatable("item.create_enchantment_industry.enchanting_guide.tooltip.current_enchantment"));
+		pTooltipComponents.add(Component.translatable("item.create_enchantment_industry.enchanting_guide.tooltip.current_enchantment").withStyle(s -> s.withColor(0x7F7F7F)));
+
 		EnchantmentEntry enchantment = getEnchantment(pStack);
 		if (enchantment == null) {
-			pTooltipComponents.add(Component.translatable("item.create_enchantment_industry.enchanting_guide.tooltip.not_configured"));
+			pTooltipComponents.add(Component.translatable("item.create_enchantment_industry.enchanting_guide.tooltip.not_configured").withStyle(s -> s.withColor(0x7F7F7F)));
 		} else {
 			pTooltipComponents.add(enchantment.getFirst().getFullname(enchantment.getSecond()));
 		}
@@ -127,18 +125,20 @@ public class EnchantingGuideItem extends Item implements ExtendedScreenHandlerFa
 
 	@Nullable
 	public static EnchantmentEntry getEnchantment(ItemStack itemStack) {
-		var tag = itemStack.getTag();
+		CompoundTag tag = itemStack.getTag();
 		if (tag == null || !tag.contains("target", Tag.TAG_COMPOUND))
 			return null;
-		var target = (CompoundTag) tag.get("target");
-		if (target == null)
-			return null;
-		var book = ItemStack.of(target);
+
+		ItemStack book = ItemStack.of(tag.getCompound("target"));
+		if (book.isEmpty()) return null;
+
 		var enchantments = List.copyOf(EnchantmentHelper.getEnchantments(book).entrySet());
 		if (enchantments.isEmpty())
 			return null;
-		var index = tag.getInt("index");
-		if (index < 0 || index >= enchantments.size()) return null;
+
+		int index = tag.getInt("index");
+		if (index < 0 || index >= enchantments.size()) index = 0; // Fallback to first enchantment
+
 		var result = enchantments.get(index);
 		return EnchantmentEntry.of(result.getKey(), result.getValue());
 	}

@@ -21,9 +21,10 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.jetbrains.annotations.Nullable;
 
 public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
-	private static final Component NO_ENCHANTMENT = Component.translatable("gui.enchanting_guide.no_enchantment");
-	ImmutableList<Component> enchantments = ImmutableList.of(NO_ENCHANTMENT);
-	private Component lastEnchantmentKey = Component.literal("");
+	// FIXED: Matched the key to your en_us.json
+	private static final Component NO_ENCHANTMENT = Component.translatable("create_enchantment_industry.gui.enchanting_guide.no_enchantment");
+
+	public ImmutableList<Component> enchantments = ImmutableList.of(NO_ENCHANTMENT);
 	boolean directItemStackEdit;
 	@Nullable BlockPos blockPos = null;
 
@@ -37,6 +38,8 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 		super(type, id, inv, contentHolder);
 		this.blockPos = blockPos;
 		this.directItemStackEdit = (blockPos == null);
+		// Ensure enchantments are loaded on init
+		initAndReadInventory(contentHolder);
 	}
 
 	private void updateEnchantments(ItemStack stack) {
@@ -55,8 +58,9 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 	}
 
 	private void refreshClientScreen() {
-		if (Minecraft.getInstance().screen instanceof EnchantingGuideScreen screen) {
-			screen.updateScrollInput(true);
+		// Using FabricLoader to check environment is safer than direct Minecraft call in common code
+		if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
+			ClientInternal.refresh();
 		}
 	}
 
@@ -89,10 +93,11 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 	@Override
 	protected void addSlots() {
 		addPlayerSlots(44, 70);
+		// The ghost slot is index 36
 		this.addSlot(new SlotItemHandler(ghostInventory, 0, 51, 22) {
 			@Override
 			public boolean mayPlace(ItemStack stack) {
-				return stack.is(Items.ENCHANTED_BOOK) && !EnchantmentHelper.getEnchantments(stack).isEmpty();
+				return (stack.is(Items.ENCHANTED_BOOK) || stack.is(Items.BOOK)) && !EnchantmentHelper.getEnchantments(stack).isEmpty();
 			}
 			@Override
 			public void setChanged() {
@@ -104,16 +109,22 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 
 	@Override
 	public void clicked(int slotId, int dragType, ClickType clickTypeIn, Player player) {
-		// Handle Ghost Slot (index 36)
 		if (slotId == 36) {
 			ItemStack held = getCarried();
-			if (getSlot(36).mayPlace(held) || held.isEmpty()) {
-				ghostInventory.setStackInSlot(0, held.copy().split(1));
+			if (held.isEmpty() || mayPlace(getSlot(36), held)) {
+				ItemStack ghostStack = held.copy();
+				ghostStack.setCount(1);
+				ghostInventory.setStackInSlot(0, ghostStack);
 				getSlot(36).setChanged();
 			}
 			return;
 		}
 		super.clicked(slotId, dragType, clickTypeIn, player);
+	}
+
+	// Helper to check placement without duplicating logic
+	private boolean mayPlace(net.minecraft.world.inventory.Slot slot, ItemStack stack) {
+		return slot instanceof SlotItemHandler handler && handler.mayPlace(stack);
 	}
 
 	@Override
@@ -126,7 +137,7 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 				ghostInventory.setStackInSlot(0, copy);
 				getSlot(36).setChanged();
 			}
-		} else {
+		} else if (index == 36) {
 			ghostInventory.setStackInSlot(0, ItemStack.EMPTY);
 			getSlot(36).setChanged();
 		}
@@ -134,10 +145,26 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 	}
 
 	@Override
-	protected void saveData(ItemStack contentHolder) {}
+	protected void saveData(ItemStack contentHolder) {
+		// We handle saving via packets in the Screen, but keeping NBT updated here
+		// helps prevent desyncs if the menu is closed unexpectedly.
+		var tag = contentHolder.getOrCreateTag();
+		ItemStack target = ghostInventory.getStackInSlot(0);
+		if (target.isEmpty()) tag.remove("target");
+		else tag.put("target", target.save(new net.minecraft.nbt.CompoundTag()));
+	}
 
 	@Override
 	public boolean stillValid(Player player) {
 		return directItemStackEdit || (blockPos != null && player.level().getBlockEntity(blockPos) instanceof BlazeEnchanterBlockEntity);
+	}
+
+	// Nested class to isolate Client-only code from the Server
+	private static class ClientInternal {
+		private static void refresh() {
+			if (Minecraft.getInstance().screen instanceof EnchantingGuideScreen screen) {
+				screen.updateScrollInput(true);
+			}
+		}
 	}
 }

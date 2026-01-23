@@ -1,108 +1,58 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.Optional;
 
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.enchantment.Enchantment;
+import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
+import plus.dragons.createenchantmentindustry.foundation.config.CeiConfigs;
 
-import com.google.common.collect.ImmutableList;
-import com.simibubi.create.foundation.gui.menu.AbstractSimiContainerScreen;
-import com.simibubi.create.foundation.gui.widget.Label;
-import com.simibubi.create.foundation.gui.widget.SelectionScrollInput;
+public class EnchantmentEntry {
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.Rect2i;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Inventory;
-import plus.dragons.createenchantmentindustry.entry.CeiPackets;
-import plus.dragons.createenchantmentindustry.foundation.gui.CeiGuiTextures;
+	// Minimal Pair implementation
+	private final Enchantment first;
+	private final int second;
 
-import static com.simibubi.create.foundation.gui.AllGuiTextures.PLAYER_INVENTORY;
+	public static final TagKey<Enchantment> HYPER_ENCHANTABLE =
+			TagKey.create(Registries.ENCHANTMENT, EnchantmentIndustry.genRL("hyper_enchantable"));
+	public static final TagKey<Enchantment> HYPER_ENCHANTABLE_BLACKLIST =
+			TagKey.create(Registries.ENCHANTMENT, EnchantmentIndustry.genRL("hyper_enchantable_blacklist"));
 
-public class EnchantingGuideScreen extends AbstractSimiContainerScreen<EnchantingGuideMenu> {
-
-	private static final int ENCHANTING_GUIDE_WIDTH = 178;
-	private static final int TEXTURE_WIDTH = 188;
-	private static final int TEXTURE_HEIGHT = 92;
-
-	private List<Rect2i> extraAreas = Collections.emptyList();
-	public int index;
-	public SelectionScrollInput scrollInput;
-	public Label scrollInputLabel;
-	private final boolean directItemStackEdit;
-	@Nullable
-	private final BlockPos blockPos;
-
-	public EnchantingGuideScreen(EnchantingGuideMenu container, Inventory inv, Component title) {
-		super(container, inv, title);
-		this.directItemStackEdit = container.directItemStackEdit;
-		this.blockPos = container.blockPos;
+	protected EnchantmentEntry(Enchantment first, int second) {
+		this.first = first;
+		this.second = second;
 	}
 
-	public void updateScrollInput(boolean resetIndex) {
-		if (resetIndex) index = 0;
-		if (scrollInput != null) {
-			scrollInput.forOptions(menu.enchantments);
-			scrollInput.setState(index);
+	public static EnchantmentEntry of(Enchantment enchantment, int level) {
+		return new EnchantmentEntry(enchantment, level);
+	}
+
+	public Enchantment getFirst() { return first; }
+	public int getSecond() { return second; }
+
+	public boolean valid() {
+		Enchantment enchantment = getFirst();
+		int level = getSecond();
+		int maxLevel = enchantment.getMaxLevel();
+
+		Optional<Holder.Reference<Enchantment>> optional =
+				BuiltInRegistries.ENCHANTMENT.getHolder(BuiltInRegistries.ENCHANTMENT.getId(enchantment));
+
+		if (optional.isPresent()) {
+			Holder<Enchantment> holder = optional.get();
+			if (holder.is(HYPER_ENCHANTABLE_BLACKLIST)) {
+				return level <= maxLevel;
+			} else if (maxLevel == 1 && level > 1) {
+				return holder.is(HYPER_ENCHANTABLE) &&
+						CeiConfigs.SERVER.enableHyperEnchant.get() &&
+						level <= maxLevel + CeiConfigs.SERVER.maxHyperEnchantingLevelExtension.get();
+			}
 		}
+
+		return level <= maxLevel + (CeiConfigs.SERVER.enableHyperEnchant.get() ?
+				CeiConfigs.SERVER.maxHyperEnchantingLevelExtension.get() : 0);
 	}
-
-	@Override
-	protected void init() {
-		setWindowSize(
-				TEXTURE_WIDTH,
-				TEXTURE_HEIGHT + 4 + PLAYER_INVENTORY.getHeight()
-		);
-		setWindowOffset(-32, 0);
-		super.init();
-
-		int guideX = getLeftOfCentered(ENCHANTING_GUIDE_WIDTH);
-		int guideY = topPos;
-
-		extraAreas = ImmutableList.of(
-				new Rect2i(guideX + TEXTURE_WIDTH, guideY + TEXTURE_HEIGHT - 48, 48, 48),
-				new Rect2i(guideX, guideY, imageWidth, imageHeight)
-		);
-
-		index = menu.contentHolder.getOrCreateTag().getInt("index");
-
-		scrollInput = new SelectionScrollInput(guideX + 40, guideY + 22, 120, 16);
-		scrollInputLabel = new Label(guideX + 43, guideY + 26, Component.literal("")).withShadow();
-		scrollInput.calling(i -> this.index = i).writingTo(scrollInputLabel);
-		addRenderableWidget(scrollInputLabel);
-		addRenderableWidget(scrollInput);
-
-		updateScrollInput(false);
-	}
-
-	@Override
-	protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-		int invX = getLeftOfCentered(PLAYER_INVENTORY.getWidth());
-		int invY = topPos + TEXTURE_HEIGHT + 4;
-		renderPlayerInventory(graphics, invX, invY);
-
-		int guideX = getLeftOfCentered(ENCHANTING_GUIDE_WIDTH);
-		int guideY = topPos;
-
-		// FIXED: Using the new static reference and method from CeiGuiTextures
-		graphics.blit(CeiGuiTextures.ENCHANTING_GUIDE_LOCATION, guideX, guideY, 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT, 256, 256);
-
-		graphics.drawCenteredString(font, title, guideX + ENCHANTING_GUIDE_WIDTH / 2, guideY + 3, 0xFFFFFF);
-	}
-
-	@Override
-	public void removed() {
-		super.removed();
-		if (directItemStackEdit)
-			CeiPackets.channel.sendToServer(new EnchantingGuideEditPacket(index, menu.getSlot(36).getItem()));
-		else
-			CeiPackets.channel.sendToServer(new BlazeEnchanterEditPacket(index, menu.getSlot(36).getItem(), blockPos));
-	}
-
-	@Override
-	public List<Rect2i> getExtraAreas() {
-		return extraAreas;
-	}
-
 }

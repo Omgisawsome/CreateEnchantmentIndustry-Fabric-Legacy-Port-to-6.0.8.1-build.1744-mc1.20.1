@@ -10,31 +10,25 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 import plus.dragons.createenchantmentindustry.foundation.config.CeiConfigs;
 
-public class EnchantmentEntry {
-
-	// Minimal Pair implementation
-	private final Enchantment first;
-	private final int second;
+public class EnchantmentEntry extends Enchanting.Pair<Enchantment, Integer> {
 
 	public static final TagKey<Enchantment> HYPER_ENCHANTABLE =
 			TagKey.create(Registries.ENCHANTMENT, EnchantmentIndustry.genRL("hyper_enchantable"));
 	public static final TagKey<Enchantment> HYPER_ENCHANTABLE_BLACKLIST =
 			TagKey.create(Registries.ENCHANTMENT, EnchantmentIndustry.genRL("hyper_enchantable_blacklist"));
 
-	protected EnchantmentEntry(Enchantment first, int second) {
-		this.first = first;
-		this.second = second;
+	protected EnchantmentEntry(Enchantment first, Integer second) {
+		super(first, second);
 	}
 
-	public static EnchantmentEntry of(Enchantment enchantment, int level) {
+	public static EnchantmentEntry of(Enchantment enchantment, Integer level) {
 		return new EnchantmentEntry(enchantment, level);
 	}
 
-	public Enchantment getFirst() { return first; }
-	public int getSecond() { return second; }
-
 	public boolean valid() {
 		Enchantment enchantment = getFirst();
+		if (enchantment == null) return false; // CRITICAL: Prevent crash if enchantment is null
+
 		int level = getSecond();
 		int maxLevel = enchantment.getMaxLevel();
 
