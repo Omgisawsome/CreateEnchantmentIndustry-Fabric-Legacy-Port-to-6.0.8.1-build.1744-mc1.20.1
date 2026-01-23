@@ -23,7 +23,6 @@ import static com.simibubi.create.foundation.gui.AllGuiTextures.PLAYER_INVENTORY
 public class EnchantingGuideScreen extends AbstractSimiContainerScreen<EnchantingGuideMenu> {
 
 	private static final int ENCHANTING_GUIDE_WIDTH = 178;
-	// Hardcoded dimensions to avoid accessing the broken class interface
 	private static final int TEXTURE_WIDTH = 188;
 	private static final int TEXTURE_HEIGHT = 92;
 
@@ -43,8 +42,10 @@ public class EnchantingGuideScreen extends AbstractSimiContainerScreen<Enchantin
 
 	public void updateScrollInput(boolean resetIndex) {
 		if (resetIndex) index = 0;
-		scrollInput.forOptions(menu.enchantments);
-		scrollInput.setState(index);
+		if (scrollInput != null) {
+			scrollInput.forOptions(menu.enchantments);
+			scrollInput.setState(index);
+		}
 	}
 
 	@Override
@@ -84,9 +85,8 @@ public class EnchantingGuideScreen extends AbstractSimiContainerScreen<Enchantin
 		int guideX = getLeftOfCentered(ENCHANTING_GUIDE_WIDTH);
 		int guideY = topPos;
 
-		// BYPASS: Accessing the location field directly.
-		// If the compiler still complains, we use the direct ResourceLocation.
-		graphics.blit(CeiGuiTextures.ENCHANTING_GUIDE.location, guideX, guideY, 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT, 256, 256);
+		// FIXED: Using the new static reference and method from CeiGuiTextures
+		graphics.blit(CeiGuiTextures.ENCHANTING_GUIDE_LOCATION, guideX, guideY, 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT, 256, 256);
 
 		graphics.drawCenteredString(font, title, guideX + ENCHANTING_GUIDE_WIDTH / 2, guideY + 3, 0xFFFFFF);
 	}

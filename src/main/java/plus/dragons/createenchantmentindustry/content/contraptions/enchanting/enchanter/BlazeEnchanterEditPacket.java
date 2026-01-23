@@ -1,60 +1,64 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter;
 
 import com.simibubi.create.foundation.networking.SimplePacketBase;
-
-import io.github.fabricators_of_create.porting_lib.util.NBTSerializer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-
-import javax.naming.Context;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class BlazeEnchanterEditPacket extends SimplePacketBase {
+	private final int index;
+	private final ItemStack itemStack;
+	private final BlockPos pos;
 
-    private final int index;
-    private final ItemStack itemStack;
-    private final BlockPos blockPos;
+	public BlazeEnchanterEditPacket(int index, ItemStack itemStack, BlockPos pos) {
+		this.index = index;
+		this.itemStack = itemStack;
+		this.pos = pos;
+	}
 
+	public BlazeEnchanterEditPacket(FriendlyByteBuf buffer) {
+		this.index = buffer.readInt();
+		this.itemStack = buffer.readItem();
+		this.pos = buffer.readBlockPos();
+	}
 
-    public BlazeEnchanterEditPacket(int index, ItemStack enchantedBook, BlockPos blockPos) {
-        this.index = index;
-        itemStack = enchantedBook;
-        this.blockPos = blockPos;
-    }
+	@Override
+	public void write(FriendlyByteBuf buffer) {
+		buffer.writeInt(index);
+		buffer.writeItem(itemStack);
+		buffer.writeBlockPos(pos);
+	}
 
-    public BlazeEnchanterEditPacket(FriendlyByteBuf buffer) {
-        index = buffer.readInt();
-        itemStack = buffer.readItem();
-        blockPos = buffer.readBlockPos();
-    }
+	@Override
+	public boolean handle(Context context) {
+		context.enqueueWork(() -> {
+			ServerPlayer sender = context.getSender();
+			if (sender == null || sender.level() == null) return;
 
-    @Override
-    public void write(FriendlyByteBuf buffer) {
-        buffer.writeInt(index);
-        buffer.writeItem(itemStack);
-        buffer.writeBlockPos(blockPos);
-    }
+			BlockEntity be = sender.level().getBlockEntity(pos);
+			if (be instanceof BlazeEnchanterBlockEntity enchanter) {
+				// FIX: Access targetItem directly instead of getGuide()
+				ItemStack guide = enchanter.targetItem;
 
-    @Override
-    public boolean handle(Context context) {
-        context.enqueueWork(() -> {
-                    ServerPlayer sender = context.getSender();
-                    if(!(sender.level().getBlockEntity(blockPos) instanceof BlazeEnchanterBlockEntity blazeEnchanter))
-                        return;
+				if (guide != null && !guide.isEmpty()) {
+					CompoundTag tag = guide.getOrCreateTag();
+					tag.putInt("index", index);
 
-                    CompoundTag tag = blazeEnchanter.targetItem.getOrCreateTag();
-                    tag.putInt("index", index);
-                    tag.put("target", NBTSerializer.serializeNBT(itemStack));
-                    tag.remove("blockPos");
+					if (itemStack.isEmpty()) {
+						tag.remove("target");
+					} else {
+						// Use the standard saving method for 1.20.1
+						tag.put("target", itemStack.save(new CompoundTag()));
+					}
 
-                    if(blazeEnchanter.processingTicks>5){
-                        blazeEnchanter.processingTicks = BlazeEnchanterBlockEntity.ENCHANTING_TIME;
-                    }
-
-                    blazeEnchanter.notifyUpdate();
-                });
-        return true;
-    }
+					enchanter.setChanged();
+					enchanter.sendData(); // This syncs the change to clients
+				}
+			}
+		});
+		return true;
+	}
 }

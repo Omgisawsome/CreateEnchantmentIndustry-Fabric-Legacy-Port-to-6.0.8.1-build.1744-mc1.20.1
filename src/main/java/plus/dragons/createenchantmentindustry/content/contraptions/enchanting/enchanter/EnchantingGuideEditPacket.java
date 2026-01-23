@@ -1,25 +1,22 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter;
 
 import com.simibubi.create.foundation.networking.SimplePacketBase;
-import io.github.fabricators_of_create.porting_lib.util.NBTSerializer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import plus.dragons.createenchantmentindustry.entry.CeiItems;
 
 public class EnchantingGuideEditPacket extends SimplePacketBase {
-
 	private final int index;
 	private final ItemStack itemStack;
 
-	// Constructor for sending the packet
-	public EnchantingGuideEditPacket(int index, ItemStack enchantedBook) {
+	public EnchantingGuideEditPacket(int index, ItemStack itemStack) {
 		this.index = index;
-		this.itemStack = enchantedBook;
+		this.itemStack = itemStack;
 	}
 
-	// Constructor for receiving the packet
 	public EnchantingGuideEditPacket(FriendlyByteBuf buffer) {
 		this.index = buffer.readInt();
 		this.itemStack = buffer.readItem();
@@ -35,20 +32,28 @@ public class EnchantingGuideEditPacket extends SimplePacketBase {
 	public boolean handle(Context context) {
 		context.enqueueWork(() -> {
 			ServerPlayer sender = context.getSender();
-			if (sender == null)
-				return;
+			if (sender == null) return;
 
-			ItemStack mainHandItem = sender.getMainHandItem();
-			if (!CeiItems.ENCHANTING_GUIDE.isIn(mainHandItem))
-				return;
+			ItemStack guide = sender.getItemInHand(InteractionHand.MAIN_HAND);
+			if (!guide.is(CeiItems.ENCHANTING_GUIDE.get())) {
+				guide = sender.getItemInHand(InteractionHand.OFF_HAND);
+			}
 
-			// Write the index and target ItemStack to the tag
-			CompoundTag tag = mainHandItem.getOrCreateTag();
-			tag.putInt("index", index);
-			tag.put("target", NBTSerializer.serializeNBT(itemStack));
+			if (guide.is(CeiItems.ENCHANTING_GUIDE.get())) {
+				CompoundTag tag = guide.getOrCreateTag();
+				tag.putInt("index", index);
 
-			// Apply a small cooldown to prevent spam
-			sender.getCooldowns().addCooldown(mainHandItem.getItem(), 5);
+				// Use vanilla item saving to ensure 1.20.1 compatibility
+				if (itemStack.isEmpty()) {
+					tag.remove("target");
+				} else {
+					tag.put("target", itemStack.save(new CompoundTag()));
+				}
+
+				// IMPORTANT: In 1.20.1, we need to make sure the inventory
+				// knows the stack changed so it syncs back to client.
+				sender.containerMenu.broadcastChanges();
+			}
 		});
 		return true;
 	}
