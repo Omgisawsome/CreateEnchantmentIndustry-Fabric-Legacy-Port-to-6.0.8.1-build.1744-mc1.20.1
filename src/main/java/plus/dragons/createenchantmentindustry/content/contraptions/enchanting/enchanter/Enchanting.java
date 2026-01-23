@@ -18,7 +18,8 @@ public class Enchanting {
 		private final F first;
 		private final S second;
 
-		private Pair(F first, S second) {
+		// FIXED: Changed to protected so EnchantmentEntry can extend it
+		protected Pair(F first, S second) {
 			this.first = first;
 			this.second = second;
 		}
@@ -34,7 +35,8 @@ public class Enchanting {
 	@Nullable
 	public static EnchantmentEntry getTargetEnchantment(ItemStack itemStack, boolean hyper) {
 		if (itemStack.is(CeiItems.ENCHANTING_GUIDE.get())) {
-			var result = EnchantmentGuideItem.getEnchantment(itemStack);
+			// FIXED: Corrected class name from EnchantmentGuideItem to EnchantingGuideItem
+			var result = EnchantingGuideItem.getEnchantment(itemStack);
 			if (result == null) return null;
 			if (!hyper) return result;
 
@@ -102,8 +104,6 @@ public class Enchanting {
 
 	public static int getExperienceConsumption(Enchantment enchantment, int level) {
 		// Calculate a base cost based on rarity and level
-		// Rarity values: Common(10), Uncommon(5), Rare(2), Very Rare(1)
-		// We invert this for cost calculation
 		int weight = switch (enchantment.getRarity()) {
 			case COMMON -> 1;
 			case UNCOMMON -> 2;
