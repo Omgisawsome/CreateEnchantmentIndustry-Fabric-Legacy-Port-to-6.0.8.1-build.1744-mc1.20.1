@@ -19,7 +19,6 @@ import com.simibubi.create.foundation.blockEntity.ComparatorUtil;
 
 import io.github.fabricators_of_create.porting_lib.util.NetworkHooks;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
@@ -104,27 +103,31 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 					withBlockEntityDo(player.level(), pos,
 							toolbox -> NetworkHooks.openScreen((ServerPlayer) player,
 									blazeEnchanter, buf -> {
-										buf.writeItem(blazeEnchanter.targetItem);
+										// FIX: WRITING ORDER MUST MATCH EnchantingGuideMenu CONSTRUCTOR
+										// 1. Boolean (directItemStackEdit = false)
+										// 2. BlockPos (pos)
+										// 3. ItemStack (targetItem)
 										buf.writeBoolean(false);
 										buf.writeBlockPos(pos);
+										buf.writeItem(blazeEnchanter.targetItem);
 									}));
 				}
 			}
 			return InteractionResult.SUCCESS;
 		}
+
 		if (!heldItem.isEmpty()){
 			return onBlockEntityUse(worldIn, pos, te -> {
 				if(heldItem.is(CeiItems.ENCHANTING_GUIDE.get())){
 					if (!worldIn.isClientSide) {
 						var target = te.targetItem.copy();
-						te.targetItem = heldItem;
+						// FIX: Use setTargetItem to ensure sync
+						te.setTargetItem(heldItem.copy()); // Copy to prevent reference issues
 						if(!player.getAbilities().instabuild)
 							player.setItemInHand(handIn, target);
-						te.notifyUpdate();
 					}
 					return InteractionResult.SUCCESS;
 				} else if(Enchanting.getValidEnchantment(heldItem, te.targetItem, te.hyper()) != null) {
-					// Logic enabled: getHeldItemStack now exists in BlockEntity
 					ItemStack heldItemStack = te.getHeldItemStack();
 					if (heldItemStack.isEmpty()) {
 						if (!worldIn.isClientSide) {
@@ -137,7 +140,6 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 					}
 					return InteractionResult.FAIL;
 				} else if (AllItems.GOGGLES.isIn(heldItem)) {
-					// Logic enabled: goggles field now exists in BlockEntity
 					if (te.goggles)
 						return InteractionResult.PASS;
 					te.goggles = true;
@@ -148,7 +150,6 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 			});
 		} else {
 			return onBlockEntityUse(worldIn, pos, te -> {
-				// Logic enabled: getHeldItemStack now exists in BlockEntity
 				ItemStack heldItemStack = te.getHeldItemStack();
 				if (!heldItemStack.isEmpty()) {
 					if (!worldIn.isClientSide) {
@@ -159,7 +160,6 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 					return InteractionResult.SUCCESS;
 				}
 
-				// Logic enabled: goggles field now exists in BlockEntity
 				if (!te.goggles)
 					return InteractionResult.PASS;
 				te.goggles = false;
@@ -183,7 +183,6 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 		return InteractionResult.SUCCESS;
 	}
 
-
 	@Override
 	public void setPlacedBy(Level pLevel, BlockPos pPos, BlockState pState, @Nullable LivingEntity pPlacer, ItemStack pStack) {
 		super.setPlacedBy(pLevel, pPos, pState, pPlacer, pStack);
@@ -199,7 +198,6 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 	public boolean hasAnalogOutputSignal(BlockState state) {
 		return true;
 	}
-
 
 	@Override
 	public List<ItemStack> getDrops(BlockState pState, LootParams.Builder pParams) {

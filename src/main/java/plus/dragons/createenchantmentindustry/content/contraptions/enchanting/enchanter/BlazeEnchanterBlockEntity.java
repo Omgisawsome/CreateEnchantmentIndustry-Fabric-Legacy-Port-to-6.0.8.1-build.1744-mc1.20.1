@@ -61,7 +61,8 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	protected SmartFluidTankBehaviour internalTank;
 	protected TransportedItemStack heldItem;
-	protected ItemStack targetItem = new ItemStack(CeiItems.ENCHANTING_GUIDE.get());
+	// Default to a fresh stack to prevent null crashes
+	public ItemStack targetItem = new ItemStack(CeiItems.ENCHANTING_GUIDE.get());
 	protected int processingTicks;
 
 	public boolean goggles;
@@ -195,7 +196,6 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		Enchanting.Pair<Enchantment, Integer> pair = Enchanting.Pair.of(entry.getFirst(), entry.getSecond());
 		Enchanting.enchantItem(heldItem.stack, pair);
 
-		// FIXED: Casting to (Fluid) to resolve ambiguity and removed .get().getSource()
 		FluidStack cost = new FluidStack((Fluid) (hyper() ? CeiFluids.HYPER_EXPERIENCE : CeiFluids.EXPERIENCE),
 				(long) Enchanting.getExperienceConsumption(entry.getFirst(), entry.getSecond()));
 
@@ -223,7 +223,6 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	}
 
 	public boolean hyper() {
-		// FIXED: Logic check to see if the current fluid is same as Hyper Experience
 		return internalTank.getPrimaryHandler().getFluid().getFluid().isSame(CeiFluids.HYPER_EXPERIENCE);
 	}
 
@@ -242,6 +241,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	public void setTargetItem(ItemStack targetItem) {
 		this.targetItem = targetItem;
 		setChanged();
+		// FORCE UPDATE so the client sees the new book immediately
 		notifyUpdate();
 	}
 
@@ -258,7 +258,8 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	protected void read(CompoundTag tag, boolean clientPacket) {
 		super.read(tag, clientPacket);
 		processingTicks = tag.getInt("Processing");
-		targetItem = ItemStack.of(tag.getCompound("Target"));
+		if (tag.contains("Target"))
+			targetItem = ItemStack.of(tag.getCompound("Target"));
 		goggles = tag.getBoolean("Goggles");
 		heldItem = tag.contains("Held") ? TransportedItemStack.read(tag.getCompound("Held")) : null;
 	}
