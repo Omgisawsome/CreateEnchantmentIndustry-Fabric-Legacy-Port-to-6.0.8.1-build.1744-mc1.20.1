@@ -21,7 +21,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.jetbrains.annotations.Nullable;
 
 public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
-	// FIXED: Matched the key to your en_us.json
+	// Matches "create_enchantment_industry.gui.enchanting_guide.no_enchantment"
 	private static final Component NO_ENCHANTMENT = Component.translatable("create_enchantment_industry.gui.enchanting_guide.no_enchantment");
 
 	public ImmutableList<Component> enchantments = ImmutableList.of(NO_ENCHANTMENT);
@@ -38,7 +38,6 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 		super(type, id, inv, contentHolder);
 		this.blockPos = blockPos;
 		this.directItemStackEdit = (blockPos == null);
-		// Ensure enchantments are loaded on init
 		initAndReadInventory(contentHolder);
 	}
 
@@ -58,7 +57,6 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 	}
 
 	private void refreshClientScreen() {
-		// Using FabricLoader to check environment is safer than direct Minecraft call in common code
 		if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
 			ClientInternal.refresh();
 		}
@@ -92,11 +90,16 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 
 	@Override
 	protected void addSlots() {
-		addPlayerSlots(44, 70);
-		// The ghost slot is index 36
+		// FIXED: Adjusted coordinates to match the texture at y=96
+		// x = (188 - 176)/2 + 8 = 14
+		// y = 96 + 18 = 114 (approx)
+		addPlayerSlots(14, 114);
+
+		// Ghost Slot at (51, 22)
 		this.addSlot(new SlotItemHandler(ghostInventory, 0, 51, 22) {
 			@Override
 			public boolean mayPlace(ItemStack stack) {
+				// CRITICAL: You MUST use an Enchanted Book. Regular Books often fail this check.
 				return (stack.is(Items.ENCHANTED_BOOK) || stack.is(Items.BOOK)) && !EnchantmentHelper.getEnchantments(stack).isEmpty();
 			}
 			@Override
@@ -122,7 +125,6 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 		super.clicked(slotId, dragType, clickTypeIn, player);
 	}
 
-	// Helper to check placement without duplicating logic
 	private boolean mayPlace(net.minecraft.world.inventory.Slot slot, ItemStack stack) {
 		return slot instanceof SlotItemHandler handler && handler.mayPlace(stack);
 	}
@@ -146,8 +148,7 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 
 	@Override
 	protected void saveData(ItemStack contentHolder) {
-		// We handle saving via packets in the Screen, but keeping NBT updated here
-		// helps prevent desyncs if the menu is closed unexpectedly.
+		// This is a backup save, mostly handled by Screen packets
 		var tag = contentHolder.getOrCreateTag();
 		ItemStack target = ghostInventory.getStackInSlot(0);
 		if (target.isEmpty()) tag.remove("target");
@@ -159,7 +160,6 @@ public class EnchantingGuideMenu extends GhostItemMenu<ItemStack> {
 		return directItemStackEdit || (blockPos != null && player.level().getBlockEntity(blockPos) instanceof BlazeEnchanterBlockEntity);
 	}
 
-	// Nested class to isolate Client-only code from the Server
 	private static class ClientInternal {
 		private static void refresh() {
 			if (Minecraft.getInstance().screen instanceof EnchantingGuideScreen screen) {

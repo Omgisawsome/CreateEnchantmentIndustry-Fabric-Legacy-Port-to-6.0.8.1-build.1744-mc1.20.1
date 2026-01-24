@@ -103,13 +103,13 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 					withBlockEntityDo(player.level(), pos,
 							toolbox -> NetworkHooks.openScreen((ServerPlayer) player,
 									blazeEnchanter, buf -> {
-										// FIX: WRITING ORDER MUST MATCH EnchantingGuideMenu CONSTRUCTOR
-										// 1. Boolean (directItemStackEdit = false)
-										// 2. BlockPos (pos)
-										// 3. ItemStack (targetItem)
-										buf.writeBoolean(false);
-										buf.writeBlockPos(pos);
+										// FIX: Order must match EnchantingGuideMenu constructor
+										// 1. Item (consumed by super/GhostItemMenu)
 										buf.writeItem(blazeEnchanter.targetItem);
+										// 2. Boolean (directItemStackEdit)
+										buf.writeBoolean(false);
+										// 3. BlockPos (pos)
+										buf.writeBlockPos(pos);
 									}));
 				}
 			}
@@ -121,8 +121,7 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 				if(heldItem.is(CeiItems.ENCHANTING_GUIDE.get())){
 					if (!worldIn.isClientSide) {
 						var target = te.targetItem.copy();
-						// FIX: Use setTargetItem to ensure sync
-						te.setTargetItem(heldItem.copy()); // Copy to prevent reference issues
+						te.setTargetItem(heldItem.copy());
 						if(!player.getAbilities().instabuild)
 							player.setItemInHand(handIn, target);
 					}

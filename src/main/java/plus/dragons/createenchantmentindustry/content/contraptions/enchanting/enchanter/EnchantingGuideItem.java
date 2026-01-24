@@ -4,6 +4,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import com.simibubi.create.content.processing.burner.BlazeBurnerBlock;
+import com.simibubi.create.content.processing.burner.BlazeBurnerBlockEntity;
 import com.simibubi.create.foundation.advancement.AdvancementBehaviour;
 
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
@@ -91,11 +92,9 @@ public class EnchantingGuideItem extends Item implements ExtendedScreenHandlerFa
 
 	@Override
 	public void writeScreenOpeningData(ServerPlayer player, FriendlyByteBuf buf) {
-		// CRITICAL FIX: Match the order expected by EnchantingGuideMenu(type, id, inv, buf)
-		// 1. Boolean (directItemStackEdit)
-		// 2. ItemStack (createOnClient reads this)
-		buf.writeBoolean(true);
+		// FIXED: Item MUST be written first because GhostItemMenu reads it in super()
 		buf.writeItem(player.getItemInHand(InteractionHand.MAIN_HAND));
+		buf.writeBoolean(true);
 	}
 
 	@Override
@@ -137,7 +136,7 @@ public class EnchantingGuideItem extends Item implements ExtendedScreenHandlerFa
 			return null;
 
 		int index = tag.getInt("index");
-		if (index < 0 || index >= enchantments.size()) index = 0; // Fallback to first enchantment
+		if (index < 0 || index >= enchantments.size()) index = 0;
 
 		var result = enchantments.get(index);
 		return EnchantmentEntry.of(result.getKey(), result.getValue());

@@ -48,7 +48,15 @@ public class EnchantingGuideScreen extends AbstractSimiContainerScreen<Enchantin
 			scrollInput.forOptions(menu.enchantments);
 			// Safety check to ensure index is within bounds
 			if (index >= menu.enchantments.size()) index = 0;
+
 			scrollInput.setState(index);
+
+			// FIX: Force the label to update its text immediately.
+			// The ScrollInput widget often skips updating the label if the index number didn't change (e.g. 0 -> 0),
+			// even if the text at that index (No Enchantment -> Sharpness I) did change.
+			if (index >= 0 && index < menu.enchantments.size()) {
+				scrollInputLabel.text = menu.enchantments.get(index);
+			}
 		}
 	}
 
@@ -95,7 +103,6 @@ public class EnchantingGuideScreen extends AbstractSimiContainerScreen<Enchantin
 		int guideX = getLeftOfCentered(ENCHANTING_GUIDE_WIDTH);
 		int guideY = topPos;
 
-		// FIXED: Call the static render method directly
 		CeiGuiTextures.render(graphics, guideX, guideY);
 
 		Component titleText = Component.translatable("item.create_enchantment_industry.enchanting_guide");

@@ -61,7 +61,6 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	protected SmartFluidTankBehaviour internalTank;
 	protected TransportedItemStack heldItem;
-	// Default to a fresh stack to prevent null crashes
 	public ItemStack targetItem = new ItemStack(CeiItems.ENCHANTING_GUIDE.get());
 	protected int processingTicks;
 
@@ -176,7 +175,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		if (processingTicks > 0) {
 			processingTicks--;
 			if (processingTicks == 0) continueProcessing();
-			return;
+			return; // Don't move while processing
 		}
 
 		heldItem.beltPosition += 0.125f;
@@ -185,7 +184,16 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			if (entry != null) {
 				processingTicks = ENCHANTING_TIME;
 				setChanged();
+				return; // Pause movement to start processing
 			}
+		}
+
+		// FIXED: Eject the item if it reaches the end of the path
+		if (heldItem.beltPosition >= 1.0f) {
+			Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1, worldPosition.getZ() + 0.5, heldItem.stack);
+			heldItem = null;
+			setChanged();
+			notifyUpdate();
 		}
 	}
 
@@ -204,7 +212,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			t.commit();
 		}
 
-		heldItem = null;
+		// FIXED: Do NOT nullify heldItem here. Let it be ejected by tick() logic.
 		setChanged();
 		return true;
 	}
@@ -241,7 +249,6 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	public void setTargetItem(ItemStack targetItem) {
 		this.targetItem = targetItem;
 		setChanged();
-		// FORCE UPDATE so the client sees the new book immediately
 		notifyUpdate();
 	}
 
