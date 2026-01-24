@@ -175,7 +175,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 		if (processingTicks > 0) {
 			processingTicks--;
 			if (processingTicks == 0) continueProcessing();
-			return; // Don't move while processing
+			return;
 		}
 
 		heldItem.beltPosition += 0.125f;
@@ -184,11 +184,11 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			if (entry != null) {
 				processingTicks = ENCHANTING_TIME;
 				setChanged();
-				return; // Pause movement to start processing
+				return;
 			}
 		}
 
-		// FIXED: Eject the item if it reaches the end of the path
+		// Eject item if it reaches end of path
 		if (heldItem.beltPosition >= 1.0f) {
 			Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1, worldPosition.getZ() + 0.5, heldItem.stack);
 			heldItem = null;
@@ -198,27 +198,38 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	}
 
 	protected boolean continueProcessing() {
-		var entry = Enchanting.getValidEnchantment(heldItem.stack, targetItem, hyper());
+		boolean hyper = hyper();
+		var entry = Enchanting.getValidEnchantment(heldItem.stack, targetItem, hyper);
 		if (entry == null) return false;
 
-		Enchanting.Pair<Enchantment, Integer> pair = Enchanting.Pair.of(entry.getFirst(), entry.getSecond());
-		Enchanting.enchantItem(heldItem.stack, pair);
-
-		FluidStack cost = new FluidStack((Fluid) (hyper() ? CeiFluids.HYPER_EXPERIENCE : CeiFluids.EXPERIENCE),
-				(long) Enchanting.getExperienceConsumption(entry.getFirst(), entry.getSecond()));
+		long amount = Enchanting.getExperienceConsumption(entry.getFirst(), entry.getSecond());
+		Fluid requiredFluid = hyper ? CeiFluids.HYPER_EXPERIENCE : CeiFluids.EXPERIENCE;
 
 		try (Transaction t = TransferUtil.getTransaction()) {
-			internalTank.getPrimaryHandler().extract(cost.getType(), cost.getAmount(), t);
+			long extracted = internalTank.getPrimaryHandler().extract(FluidVariant.of(requiredFluid), amount, t);
+
+			if (extracted < amount) {
+				t.abort();
+				processingTicks = 0;
+				return false;
+			}
+
+			Enchanting.Pair<Enchantment, Integer> pair = Enchanting.Pair.of(entry.getFirst(), entry.getSecond());
+			Enchanting.enchantItem(heldItem.stack, pair);
+
 			t.commit();
 		}
 
-		// FIXED: Do NOT nullify heldItem here. Let it be ejected by tick() logic.
 		setChanged();
 		return true;
 	}
 
 	protected ItemStack tryInsertingFromSide(TransportedItemStack stack, Direction side, boolean simulate) {
 		if (heldItem != null) return stack.stack;
+
+		// NEW: Reject insertion if we don't have ANY experience in the tank
+		if (!hasAnyExperience()) return stack.stack;
+
 		ItemStack inserted = stack.stack.copy();
 		inserted.setCount(1);
 		if (!simulate) {
@@ -232,6 +243,11 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	public boolean hyper() {
 		return internalTank.getPrimaryHandler().getFluid().getFluid().isSame(CeiFluids.HYPER_EXPERIENCE);
+	}
+
+	public boolean hasAnyExperience() {
+		FluidStack fs = internalTank.getPrimaryHandler().getFluid();
+		return !fs.isEmpty() && (fs.getFluid().isSame(CeiFluids.EXPERIENCE) || fs.getFluid().isSame(CeiFluids.HYPER_EXPERIENCE));
 	}
 
 	@Override

@@ -1,62 +1,55 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter;
 
 import com.simibubi.create.foundation.networking.SimplePacketBase;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.Level;
 
 public class BlazeEnchanterEditPacket extends SimplePacketBase {
-	private final int index;
-	private final ItemStack itemStack;
-	private final BlockPos pos;
 
-	public BlazeEnchanterEditPacket(int index, ItemStack itemStack, BlockPos pos) {
+	private int index;
+	private ItemStack itemStack;
+	private BlockPos blockPos;
+
+	public BlazeEnchanterEditPacket(int index, ItemStack itemStack, BlockPos blockPos) {
 		this.index = index;
 		this.itemStack = itemStack;
-		this.pos = pos;
+		this.blockPos = blockPos;
 	}
 
 	public BlazeEnchanterEditPacket(FriendlyByteBuf buffer) {
 		this.index = buffer.readInt();
 		this.itemStack = buffer.readItem();
-		this.pos = buffer.readBlockPos();
+		this.blockPos = buffer.readBlockPos();
 	}
 
 	@Override
 	public void write(FriendlyByteBuf buffer) {
 		buffer.writeInt(index);
 		buffer.writeItem(itemStack);
-		buffer.writeBlockPos(pos);
+		buffer.writeBlockPos(blockPos);
 	}
 
 	@Override
 	public boolean handle(Context context) {
 		context.enqueueWork(() -> {
-			ServerPlayer sender = context.getSender();
-			if (sender == null || sender.level() == null) return;
+			ServerPlayer player = context.getSender();
+			if (player == null) return;
+			Level level = player.level();
 
-			BlockEntity be = sender.level().getBlockEntity(pos);
-			if (be instanceof BlazeEnchanterBlockEntity enchanter) {
-				// FIX: Access targetItem directly instead of getGuide()
-				ItemStack guide = enchanter.targetItem;
+			if (level.isLoaded(blockPos) && level.getBlockEntity(blockPos) instanceof BlazeEnchanterBlockEntity be) {
+				// CRITICAL FIX: The itemStack from the client usually has the old NBT.
+				// We MUST update the "index" tag to match the selection made in the GUI.
+				ItemStack result = itemStack.copy();
+				CompoundTag tag = result.getOrCreateTag();
+				tag.putInt("index", index);
 
-				if (guide != null && !guide.isEmpty()) {
-					CompoundTag tag = guide.getOrCreateTag();
-					tag.putInt("index", index);
-
-					if (itemStack.isEmpty()) {
-						tag.remove("target");
-					} else {
-						// Use the standard saving method for 1.20.1
-						tag.put("target", itemStack.save(new CompoundTag()));
-					}
-
-					enchanter.setChanged();
-					enchanter.sendData(); // This syncs the change to clients
-				}
+				// Now set the updated item on the block entity
+				be.setTargetItem(result);
 			}
 		});
 		return true;

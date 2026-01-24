@@ -103,12 +103,8 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 					withBlockEntityDo(player.level(), pos,
 							toolbox -> NetworkHooks.openScreen((ServerPlayer) player,
 									blazeEnchanter, buf -> {
-										// FIX: Order must match EnchantingGuideMenu constructor
-										// 1. Item (consumed by super/GhostItemMenu)
 										buf.writeItem(blazeEnchanter.targetItem);
-										// 2. Boolean (directItemStackEdit)
 										buf.writeBoolean(false);
-										// 3. BlockPos (pos)
 										buf.writeBlockPos(pos);
 									}));
 				}
@@ -126,7 +122,9 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 							player.setItemInHand(handIn, target);
 					}
 					return InteractionResult.SUCCESS;
-				} else if(Enchanting.getValidEnchantment(heldItem, te.targetItem, te.hyper()) != null) {
+				}
+				// NEW CHECK: Must have experience in the tank to place an item
+				else if(te.hasAnyExperience() && Enchanting.getValidEnchantment(heldItem, te.targetItem, te.hyper()) != null) {
 					ItemStack heldItemStack = te.getHeldItemStack();
 					if (heldItemStack.isEmpty()) {
 						if (!worldIn.isClientSide) {
