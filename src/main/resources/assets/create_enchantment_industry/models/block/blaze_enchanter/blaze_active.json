@@ -1,0 +1,9 @@
+{
+  "credit": "Made with Blockbench",
+  "parent": "create_enchantment_industry:block/blaze_enchanter/blaze_idle",
+  "textures": {
+    "0": "create:block/blaze_burner/blaze_head",
+    "1": "create:block/blaze_burner/blaze_rods",
+    "particle": "create:block/blaze_burner/blaze_head"
+  }
+}

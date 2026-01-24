@@ -6,7 +6,14 @@ import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 public class CeiBlockPartials {
 
 	public static final PartialModel
-			PRINTER_TOP = block("printer/top"),
+			// Blaze Enchanter Models
+			BLAZE_ENCHANTER_IDLE = block("blaze_enchanter/blaze_idle"),
+			BLAZE_ENCHANTER_ACTIVE = block("blaze_enchanter/blaze_active"),
+			BLAZE_ENCHANTER_IDLE_HYPER = block("blaze_enchanter/blaze_idle_hyper"),
+			BLAZE_ENCHANTER_ACTIVE_HYPER = block("blaze_enchanter/blaze_active_hyper"),
+
+	// Printer Models
+	PRINTER_TOP = block("printer/top"),
 			PRINTER_MIDDLE = block("printer/middle"),
 			PRINTER_BOTTOM = block("printer/bottom");
 

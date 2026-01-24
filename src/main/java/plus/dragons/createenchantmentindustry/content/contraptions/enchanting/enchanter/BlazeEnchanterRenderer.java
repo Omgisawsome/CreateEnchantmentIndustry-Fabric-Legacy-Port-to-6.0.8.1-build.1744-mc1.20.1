@@ -5,6 +5,11 @@ import java.util.Set;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import com.simibubi.create.foundation.blockEntity.renderer.SmartBlockEntityRenderer;
+
+import net.createmod.catnip.render.CachedBuffers;
+import net.createmod.catnip.render.SuperByteBuffer;
+import net.createmod.catnip.math.AngleHelper;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.BookModel;
@@ -12,7 +17,6 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -26,137 +30,110 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.Vec3;
 
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
+import plus.dragons.createenchantmentindustry.entry.CeiBlockPartials;
 
-public class BlazeEnchanterRenderer
-		implements BlockEntityRenderer<BlazeEnchanterBlockEntity> {
+public class BlazeEnchanterRenderer extends SmartBlockEntityRenderer<BlazeEnchanterBlockEntity> {
 
-	public static final Material BOOK_MATERIAL =
-			new Material(
-					TextureAtlas.LOCATION_BLOCKS,
-					EnchantmentIndustry.genRL("block/blaze_enchanter_book")
-			);
+	public static final Material BOOK_MATERIAL = new Material(
+			TextureAtlas.LOCATION_BLOCKS,
+			EnchantmentIndustry.genRL("block/blaze_enchanter_book")
+	);
 
-	private static final float PI = (float) Math.PI;
 	private final BookModel bookModel;
 
 	public BlazeEnchanterRenderer(BlockEntityRendererProvider.Context context) {
+		super(context);
 		this.bookModel = new BookModel(context.bakeLayer(ModelLayers.BOOK));
 	}
 
 	@Override
-	public void render(
-			BlazeEnchanterBlockEntity be,
-			float partialTicks,
-			PoseStack ps,
-			MultiBufferSource buffer,
-			int light,
-			int overlay
-	) {
-		if (be.getLevel() == null)
-			return;
+	protected void renderSafe(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer,
+							  int light, int overlay) {
 
-		ps.pushPose();
-
+		renderBlaze(be, partialTicks, ps, buffer, light, overlay);
+		renderBook(be, partialTicks, ps, buffer, light, overlay);
 		renderItem(be, partialTicks, ps, buffer, light, overlay);
-		renderBook(be, partialTicks, ps, buffer);
+	}
+
+	private void renderBlaze(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer,
+							 int light, int overlay) {
+		ps.pushPose();
+		// 1. Move to center to pivot
+		ps.translate(0.5, 0, 0.5);
+
+		// 2. Rotate head
+		float headAngle = AngleHelper.rad(Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle));
+		ps.mulPose(Axis.YP.rotation(headAngle));
+
+		// 3. FIXED: Move BACK to corner so the model (0-16) renders inside the block
+		ps.translate(-0.5, 0, -0.5);
+
+		boolean active = be.processingTicks > 0;
+		boolean hyper = be.hyper();
+
+		SuperByteBuffer blazeBuffer;
+		if (active) {
+			blazeBuffer = CachedBuffers.partial(
+					hyper ? CeiBlockPartials.BLAZE_ENCHANTER_ACTIVE_HYPER : CeiBlockPartials.BLAZE_ENCHANTER_ACTIVE,
+					be.getBlockState()
+			);
+		} else {
+			blazeBuffer = CachedBuffers.partial(
+					hyper ? CeiBlockPartials.BLAZE_ENCHANTER_IDLE_HYPER : CeiBlockPartials.BLAZE_ENCHANTER_IDLE,
+					be.getBlockState()
+			);
+		}
+
+		blazeBuffer
+				.light(light)
+				.renderInto(ps, buffer.getBuffer(RenderType.translucent()));
 
 		ps.popPose();
 	}
 
-	/* -------------------------------- ITEM -------------------------------- */
+	private void renderBook(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer, int light, int overlay) {
+		if (be.targetItem.isEmpty()) return;
 
-	private void renderItem(
-			BlazeEnchanterBlockEntity be,
-			float partialTicks,
-			PoseStack ps,
-			MultiBufferSource buffer,
-			int light,
-			int overlay
-	) {
-		if (be.heldItem == null)
-			return;
+		ps.pushPose();
+		ps.translate(0.5, 0.55, 0.5);
+		float time = (float) be.getLevel().getGameTime() + partialTicks;
+		ps.translate(0, Mth.sin(time * 0.1f) * 0.05f, 0);
+
+		float headAngle = AngleHelper.rad(Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle));
+		ps.mulPose(Axis.YP.rotation(-headAngle + (float)Math.PI / 2));
+		ps.mulPose(Axis.ZP.rotationDegrees(80.0f));
+
+		float flip = Mth.lerp(partialTicks, be.oFlip, be.flip);
+		float page0 = Mth.frac(flip + 0.25f) * 1.6f - 0.3f;
+		float page1 = Mth.frac(flip + 0.75f) * 1.6f - 0.3f;
+
+		bookModel.setupAnim(time, Mth.clamp(page0, 0.0f, 1.0f), Mth.clamp(page1, 0.0f, 1.0f), 1.0f);
+		VertexConsumer vc = BOOK_MATERIAL.buffer(buffer, RenderType::entitySolid);
+		bookModel.render(ps, vc, light, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+		ps.popPose();
+	}
+
+	private void renderItem(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer,
+							int light, int overlay) {
+		if (be.heldItem == null) return;
 
 		var transported = be.heldItem;
 		Direction insertedFrom = transported.insertedFrom;
-
-		// Handle null check for insertedFrom which can happen during belt transfers
 		if (insertedFrom == null) insertedFrom = Direction.UP;
 
 		boolean horizontal = insertedFrom.getAxis().isHorizontal();
 
 		ps.pushPose();
-
-		float beltOffset = horizontal
-				? Mth.lerp(partialTicks, transported.prevBeltPosition, transported.beltPosition)
-				: 0.5f;
-
+		float beltOffset = horizontal ? Mth.lerp(partialTicks, transported.prevBeltPosition, transported.beltPosition) : 0.5f;
 		float bob = Mth.sin((be.getLevel().getGameTime() + partialTicks) * 0.2f) * 0.05f;
+		ps.translate(0.5, 0.8 + bob, 0.5);
 
-		ps.translate(0.5, 0.75 + bob, 0.5);
-
-		Vec3 offsetVec =
-				Vec3.atLowerCornerOf(insertedFrom.getOpposite().getNormal())
-						.scale(0.5f - beltOffset);
+		Vec3 offsetVec = Vec3.atLowerCornerOf(insertedFrom.getOpposite().getNormal()).scale(0.5f - beltOffset);
 		ps.translate(offsetVec.x, 0, offsetVec.z);
-
 		ps.scale(0.5f, 0.5f, 0.5f);
 
 		ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
-		itemRenderer.renderStatic(
-				transported.stack,
-				ItemDisplayContext.FIXED,
-				light,
-				overlay,
-				ps,
-				buffer,
-				be.getLevel(),
-				0
-		);
-
-		ps.popPose();
-	}
-
-	/* -------------------------------- BOOK -------------------------------- */
-
-	private void renderBook(
-			BlazeEnchanterBlockEntity be,
-			float partialTicks,
-			PoseStack ps,
-			MultiBufferSource buffer
-	) {
-		ps.pushPose();
-
-		ps.translate(0.5, 0.25, 0.5);
-
-		float time = (float)be.getLevel().getGameTime() + partialTicks;
-		ps.translate(0.0, 0.1f + Mth.sin(time * 0.1f) * 0.01f, 0.0);
-
-		// FIX: Use Mth.lerp because headAngle is now a standard float, not a LerpedFloat
-		float horizontalAngle = Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle);
-		ps.mulPose(Axis.YP.rotation(-horizontalAngle + PI / 2));
-		ps.mulPose(Axis.ZP.rotationDegrees(80.0f));
-
-		// Uses the oFlip and flip fields from the BE
-		float flip = Mth.lerp(partialTicks, be.oFlip, be.flip);
-		float page0 = Mth.frac(flip + 0.25f) * 1.6f - 0.3f;
-		float page1 = Mth.frac(flip + 0.75f) * 1.6f - 0.3f;
-
-		bookModel.setupAnim(
-				time,
-				Mth.clamp(page0, 0.0f, 1.0f),
-				Mth.clamp(page1, 0.0f, 1.0f),
-				1.0f
-		);
-
-		VertexConsumer vc = BOOK_MATERIAL.buffer(buffer, RenderType::entitySolid);
-		bookModel.render(
-				ps,
-				vc,
-				LightTexture.FULL_BRIGHT,
-				OverlayTexture.NO_OVERLAY,
-				1f, 1f, 1f, 1f
-		);
-
+		itemRenderer.renderStatic(transported.stack, ItemDisplayContext.FIXED, light, overlay, ps, buffer, be.getLevel(), 0);
 		ps.popPose();
 	}
 

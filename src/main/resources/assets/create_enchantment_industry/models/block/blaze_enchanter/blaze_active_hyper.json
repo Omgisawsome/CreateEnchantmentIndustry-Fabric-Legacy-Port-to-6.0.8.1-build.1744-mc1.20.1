@@ -1,0 +1,9 @@
+{
+  "credit": "Hyper Blaze Active",
+  "parent": "create_enchantment_industry:block/blaze_enchanter/blaze_idle",
+  "textures": {
+    "0": "create:block/blaze_burner/blaze_head_super",
+    "1": "create:block/blaze_burner/blaze_rods_super",
+    "particle": "create:block/blaze_burner/blaze_head_super"
+  }
+}
