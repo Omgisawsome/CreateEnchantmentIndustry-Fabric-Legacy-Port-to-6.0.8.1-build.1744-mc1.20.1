@@ -5,8 +5,8 @@ import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.REGISTR
 import java.util.List;
 
 import com.simibubi.create.content.processing.AssemblyOperatorBlockItem;
-import com.simibubi.create.foundation.data.SharedProperties;
 import com.simibubi.create.api.behaviour.display.DisplaySource;
+import com.simibubi.create.foundation.data.SharedProperties;
 import com.tterrag.registrate.util.entry.BlockEntry;
 import com.tterrag.registrate.util.nullness.NonNullConsumer;
 
@@ -20,8 +20,6 @@ import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.pr
 import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.printer.PrinterDisplaySource;
 
 public class CeiBlocks {
-
-	// REMOVED: .tab() calls from all builders to prevent ClassCastException
 
 	public static final BlockEntry<DisenchanterBlock> DISENCHANTER = REGISTRATE
 			.block("disenchanter", DisenchanterBlock::new)
@@ -54,7 +52,7 @@ public class CeiBlocks {
 			.addLayer(() -> RenderType::cutoutMipped)
 			.blockstate((c, p) -> p.simpleBlock(c.get(), p.models()
 					.withExistingParent(c.getName(), new ResourceLocation("create", "block/blaze_burner/block_blaze"))))
-			.item() // Blaze Enchanter needs an item to be visible/usable
+			.item()
 			.build()
 			.register();
 

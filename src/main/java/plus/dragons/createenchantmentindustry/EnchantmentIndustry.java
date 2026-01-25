@@ -23,22 +23,26 @@ public class EnchantmentIndustry implements ModInitializer {
 	public static final String MOD_ID = ID;
 	public static final Logger LOGGER = LogManager.getLogger(ID);
 
-	// FIXED: Removed the lambda wrapper to fix "Incompatible Types" error
+	// KEY FIX: Initialize REGISTRATE with the tab setting in one go.
+	// This ResourceKey must match the one used in CeiCreativeModeTabs.
 	public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(ID)
-			.defaultCreativeTab(ResourceKey.create(Registries.CREATIVE_MODE_TAB, genRL("main")));
+			.setCreativeTab(ResourceKey.create(Registries.CREATIVE_MODE_TAB, new ResourceLocation(ID, "main")));
 
 	public static final int UNIT_PER_MB = 81;
 
 	@Override
 	public void onInitialize() {
-		// 1. Configs and Triggers
+		// 1. Register the Creative Tab FIRST.
+		// This ensures the ResourceKey used above actually points to a valid tab.
+		CeiCreativeModeTabs.register();
+
+		// 2. Configs and Triggers
 		CeiConfigs.register();
 		CeiTriggers.register();
 
-		// 2. Content registration
-		// IMPORTANT: Register the Creative Tab FIRST so items can be assigned to it
-		CeiCreativeModeTabs.register();
-
+		// 3. Register Content
+		// Since REGISTRATE is already configured with .setCreativeTab(),
+		// these items will automatically go to your custom tab.
 		CeiBlocks.register();
 		CeiItems.register();
 		CeiFluids.register();
@@ -48,21 +52,15 @@ public class EnchantmentIndustry implements ModInitializer {
 		CeiRecipeTypes.register();
 		CeiTags.register();
 
-		// 3. Finalize Registrate
+		// 4. Finalize Registrate
 		REGISTRATE.register();
 
-		// 4. MANUAL TAB INJECTION REMOVED
-		// The code that used ItemGroupEvents.modifyEntriesEvent... was causing the crash.
-		// Items now automatically go to the "CeiCreativeModeTabs" registered above.
-
-		// 5. FLUID STORAGE REGISTRATION - FIXES FILTERS
-		// Register Standard Experience Bottle
+		// 5. Fluid Storage Registration
 		FluidStorage.ITEM.registerForItems((stack, context) ->
 						new FixedBottleStorage(context, FluidVariant.of(CeiFluids.EXPERIENCE)),
 				Items.EXPERIENCE_BOTTLE
 		);
 
-		// Register Hyper Experience Bottle
 		FluidStorage.ITEM.registerForItems((stack, context) ->
 						new FixedBottleStorage(context, FluidVariant.of(CeiFluids.HYPER_EXPERIENCE)),
 				CeiItems.HYPER_EXP_BOTTLE.get()
@@ -75,10 +73,6 @@ public class EnchantmentIndustry implements ModInitializer {
 		LOGGER.info("Create: Enchantment Industry initialized successfully!");
 	}
 
-	/**
-	 * A version-independent implementation of a fixed fluid storage for bottles.
-	 * This allows Smart Pipes to "see" fluid inside items that aren't buckets.
-	 */
 	private static class FixedBottleStorage extends SingleVariantItemStorage<FluidVariant> {
 		private final FluidVariant fluid;
 
