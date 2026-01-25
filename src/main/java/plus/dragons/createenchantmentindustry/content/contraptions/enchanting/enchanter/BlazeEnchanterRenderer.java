@@ -99,7 +99,7 @@ public class BlazeEnchanterRenderer extends SmartBlockEntityRenderer<BlazeEnchan
 
 		float headAngle = AngleHelper.rad(Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle));
 
-		// FIX: Changed -headAngle to headAngle so it rotates the same way as the blaze
+		// Rotates the same way as the blaze
 		ps.mulPose(Axis.YP.rotation(headAngle + (float)Math.PI / 2));
 
 		ps.mulPose(Axis.ZP.rotationDegrees(80.0f));
@@ -126,13 +126,20 @@ public class BlazeEnchanterRenderer extends SmartBlockEntityRenderer<BlazeEnchan
 
 		ps.pushPose();
 		float beltOffset = horizontal ? Mth.lerp(partialTicks, transported.prevBeltPosition, transported.beltPosition) : 0.5f;
-		float bob = Mth.sin((be.getLevel().getGameTime() + partialTicks) * 0.2f) * 0.05f;
 
-		// Item Height Adjustment
-		ps.translate(0.5, 0.9 + bob, 0.5);
+		float time = (float) be.getLevel().getGameTime() + partialTicks;
+		float bob = Mth.sin(time * 0.2f) * 0.05f;
+
+		// CHANGED: Increased height to 1.25 (+2 pixels)
+		ps.translate(0.5, 1.25 + bob, 0.5);
 
 		Vec3 offsetVec = Vec3.atLowerCornerOf(insertedFrom.getOpposite().getNormal()).scale(0.5f - beltOffset);
 		ps.translate(offsetVec.x, 0, offsetVec.z);
+
+		// CHANGED: 4x Faster Speed (15 * 4 = 60.0f)
+		ps.mulPose(Axis.YP.rotationDegrees(time * 30.0f));
+		ps.mulPose(Axis.XP.rotationDegrees(time * 30.0f));
+
 		ps.scale(0.5f, 0.5f, 0.5f);
 
 		ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
