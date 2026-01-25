@@ -6,7 +6,6 @@
   "mixins": [
     "AbstractFurnaceBlockEntityMixin",
     "BasinBlockEntityMixin",
-    "fabric.RegistrateDisplayItemsGeneratorMixin",
     "fabric.OpenEndFluidHandlerAccessor",
     "CrushingWheelControllerBlockEntityMixin",
     "DeployerFakePlayerMixin",
