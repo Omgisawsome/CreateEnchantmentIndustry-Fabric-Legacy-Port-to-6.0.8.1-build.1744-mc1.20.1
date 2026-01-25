@@ -13,12 +13,14 @@ public class CeiCreativeModeTabs {
 
 	public static final CreativeModeTab BASE_CREATIVE_TAB = FabricItemGroup.builder()
 			.title(Component.translatable("itemGroup.create_enchantment_industry.main"))
-			// Icon: Disenchanter
 			.icon(() -> new ItemStack(CeiBlocks.DISENCHANTER.get()))
 			.displayItems((parameters, output) -> {
-				// Adds all items registered by this mod's Registrate to this tab
+				// Iterate through all items registered by this mod
 				EnchantmentIndustry.REGISTRATE.getAll(Registries.ITEM).stream()
-						.forEach(entry -> output.accept(entry.get()));
+						.map(entry -> entry.get())
+						// FILTER: Exclude the Blaze Enchanter item so it stays hidden
+						.filter(item -> item != CeiBlocks.BLAZE_ENCHANTER.get().asItem())
+						.forEach(output::accept);
 			})
 			.build();
 
