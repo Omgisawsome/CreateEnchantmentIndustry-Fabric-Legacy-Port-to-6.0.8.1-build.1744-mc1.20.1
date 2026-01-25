@@ -15,15 +15,22 @@ public class EnchantmentIndustryClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		// 1. Load the custom block models (Blaze Enchanter, Printer)
+		// CRITICAL: This prevents the "Purple/Black" texture on the blaze guy
 		CeiBlockPartials.register();
+
+		// 2. Load Ponder scenes (W-key tutorials)
 		CeiPonderIndex.register();
 
+		// 3. Register the Config Screen
 		BaseConfigScreen.setDefaultActionFor(EnchantmentIndustry.MOD_ID, (BaseConfigScreen screen) -> {
 			return screen.withSpecs(null, null, CeiConfigs.server().specification);
 		});
 
+		// 4. Register Client Events (Input handling, ticking)
 		ClientEvents.register();
 
+		// 5. Register Fluid Rendering (Experience, Ink)
 		registerFluidRenderers();
 	}
 

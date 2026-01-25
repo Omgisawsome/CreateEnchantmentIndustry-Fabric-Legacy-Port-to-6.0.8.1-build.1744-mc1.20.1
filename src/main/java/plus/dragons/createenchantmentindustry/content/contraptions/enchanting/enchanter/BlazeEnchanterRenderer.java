@@ -58,14 +58,9 @@ public class BlazeEnchanterRenderer extends SmartBlockEntityRenderer<BlazeEnchan
 	private void renderBlaze(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer,
 							 int light, int overlay) {
 		ps.pushPose();
-		// 1. Move to center to pivot
 		ps.translate(0.5, 0, 0.5);
-
-		// 2. Rotate head
 		float headAngle = AngleHelper.rad(Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle));
 		ps.mulPose(Axis.YP.rotation(headAngle));
-
-		// 3. FIXED: Move BACK to corner so the model (0-16) renders inside the block
 		ps.translate(-0.5, 0, -0.5);
 
 		boolean active = be.processingTicks > 0;
@@ -85,7 +80,7 @@ public class BlazeEnchanterRenderer extends SmartBlockEntityRenderer<BlazeEnchan
 		}
 
 		blazeBuffer
-				.light(light)
+				.light(LightTexture.FULL_BRIGHT)
 				.renderInto(ps, buffer.getBuffer(RenderType.translucent()));
 
 		ps.popPose();
@@ -95,12 +90,18 @@ public class BlazeEnchanterRenderer extends SmartBlockEntityRenderer<BlazeEnchan
 		if (be.targetItem.isEmpty()) return;
 
 		ps.pushPose();
-		ps.translate(0.5, 0.55, 0.5);
+
+		// Height adjustment
+		ps.translate(0.5, 0.825, 0.5);
+
 		float time = (float) be.getLevel().getGameTime() + partialTicks;
 		ps.translate(0, Mth.sin(time * 0.1f) * 0.05f, 0);
 
 		float headAngle = AngleHelper.rad(Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle));
-		ps.mulPose(Axis.YP.rotation(-headAngle + (float)Math.PI / 2));
+
+		// FIX: Changed -headAngle to headAngle so it rotates the same way as the blaze
+		ps.mulPose(Axis.YP.rotation(headAngle + (float)Math.PI / 2));
+
 		ps.mulPose(Axis.ZP.rotationDegrees(80.0f));
 
 		float flip = Mth.lerp(partialTicks, be.oFlip, be.flip);
@@ -126,7 +127,9 @@ public class BlazeEnchanterRenderer extends SmartBlockEntityRenderer<BlazeEnchan
 		ps.pushPose();
 		float beltOffset = horizontal ? Mth.lerp(partialTicks, transported.prevBeltPosition, transported.beltPosition) : 0.5f;
 		float bob = Mth.sin((be.getLevel().getGameTime() + partialTicks) * 0.2f) * 0.05f;
-		ps.translate(0.5, 0.8 + bob, 0.5);
+
+		// Item Height Adjustment
+		ps.translate(0.5, 0.9 + bob, 0.5);
 
 		Vec3 offsetVec = Vec3.atLowerCornerOf(insertedFrom.getOpposite().getNormal()).scale(0.5f - beltOffset);
 		ps.translate(offsetVec.x, 0, offsetVec.z);

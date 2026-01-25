@@ -66,14 +66,11 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 
 	public boolean goggles;
 
+	// Animation Fields
 	public float headAngle;
 	public float oHeadAngle;
 	public float flip;
 	public float oFlip;
-	public float flipT;
-	public float flipA;
-	public float open;
-	public float oOpen;
 
 	private static final Random bookRandom = new Random();
 	protected final Random random = new Random();
@@ -139,34 +136,11 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			return;
 
 		if (level.isClientSide) {
-			oFlip = flip;
-			oOpen = open;
-			oHeadAngle = headAngle;
-			Player player = level.getNearestPlayer(worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D, worldPosition.getZ() + 0.5D, 3.0D, false);
-
-			if (player != null) {
-				double d0 = player.getX() - (worldPosition.getX() + 0.5D);
-				double d1 = player.getZ() - (worldPosition.getZ() + 0.5D);
-				float targetAngle = (float) Mth.atan2(d1, d0);
-				headAngle += (targetAngle - headAngle) * 0.1f;
-			}
-
-			while (flip >= (float) Math.PI) flip -= ((float) Math.PI * 2F);
-			while (flip < -(float) Math.PI) flip += ((float) Math.PI * 2F);
-
-			float f1 = flipT - flip;
-			while (f1 >= (float) Math.PI) f1 -= ((float) Math.PI * 2F);
-			while (f1 < -(float) Math.PI) f1 += ((float) Math.PI * 2F);
-
-			flip += f1 * 0.4F;
-			open = Mth.clamp(open, 0.0F, 1.0F);
-
-			if (bookRandom.nextInt(40) == 0) {
-				flipA += (float) (bookRandom.nextInt(4) - bookRandom.nextInt(4));
-			}
+			tickAnimation();
 			return;
 		}
 
+		// Server Side Logic below
 		if (heldItem == null) {
 			processingTicks = 0;
 			return;
@@ -195,6 +169,49 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			setChanged();
 			notifyUpdate();
 		}
+	}
+
+	private void tickAnimation() {
+		// Store old values for smooth interpolation
+		oHeadAngle = headAngle;
+		oFlip = flip;
+
+		// 1. Look At Player Logic
+		Player player = level.getNearestPlayer(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, 10, false);
+
+		if (player != null) {
+			double dx = player.getX() - (worldPosition.getX() + 0.5);
+			double dz = player.getZ() - (worldPosition.getZ() + 0.5);
+
+			// Calculate angle in RADIANS
+			double radians = Mth.atan2(dz, dx);
+
+			// Convert to DEGREES
+			// NEGATIVE converts the direction so Left goes Left (matches your previous success)
+			float targetAngle = - (float) (radians * (180.0 / Math.PI));
+
+			// Offset: -90 degrees flips it 180 compared to the previous +90
+			// This should make it face YOU instead of away.
+			targetAngle -= 90f;
+
+			// Handle wrapping (degrees) so it doesn't spin 360 wildly
+			float angleDiff = targetAngle - headAngle;
+			while (angleDiff < -180f) angleDiff += 360f;
+			while (angleDiff >= 180f) angleDiff -= 360f;
+
+			// Smoothly rotate towards target
+			headAngle += angleDiff * 0.1f;
+		}
+
+		// 2. Book Opening Logic
+		boolean bookOpen = !targetItem.isEmpty() || (heldItem != null);
+
+		if (bookOpen) {
+			flip += 0.1f;
+		} else {
+			flip -= 0.1f;
+		}
+		flip = Mth.clamp(flip, 0, 1);
 	}
 
 	protected boolean continueProcessing() {
@@ -227,7 +244,7 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	protected ItemStack tryInsertingFromSide(TransportedItemStack stack, Direction side, boolean simulate) {
 		if (heldItem != null) return stack.stack;
 
-		// NEW: Reject insertion if we don't have ANY experience in the tank
+		// Reject insertion if we don't have ANY experience in the tank
 		if (!hasAnyExperience()) return stack.stack;
 
 		ItemStack inserted = stack.stack.copy();

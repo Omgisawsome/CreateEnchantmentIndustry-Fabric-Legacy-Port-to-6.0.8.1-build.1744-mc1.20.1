@@ -217,8 +217,8 @@ public class BlazeEnchanterBlock extends HorizontalDirectionalBlock implements I
 		HeatLevel level = state.getValue(HEAT_LEVEL);
 		return switch (level) {
 			case SEETHING -> 15;
-			case KINDLED -> 11;
-			case SMOULDERING -> 7;
+			case KINDLED -> 15;
+			case SMOULDERING -> 15; // UPDATED: Always emit 15 light!
 		};
 	}
 
