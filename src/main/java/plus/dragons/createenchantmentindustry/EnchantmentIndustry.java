@@ -1,14 +1,14 @@
 package plus.dragons.createenchantmentindustry;
 
-import com.simibubi.create.AllCreativeModeTabs;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleVariantItemStorage;
-import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 import org.apache.logging.log4j.LogManager;
@@ -23,7 +23,9 @@ public class EnchantmentIndustry implements ModInitializer {
 	public static final String MOD_ID = ID;
 	public static final Logger LOGGER = LogManager.getLogger(ID);
 
-	public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(ID);
+	// FIXED: Removed the lambda wrapper to fix "Incompatible Types" error
+	public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(ID)
+			.defaultCreativeTab(ResourceKey.create(Registries.CREATIVE_MODE_TAB, genRL("main")));
 
 	public static final int UNIT_PER_MB = 81;
 
@@ -34,6 +36,9 @@ public class EnchantmentIndustry implements ModInitializer {
 		CeiTriggers.register();
 
 		// 2. Content registration
+		// IMPORTANT: Register the Creative Tab FIRST so items can be assigned to it
+		CeiCreativeModeTabs.register();
+
 		CeiBlocks.register();
 		CeiItems.register();
 		CeiFluids.register();
@@ -46,14 +51,9 @@ public class EnchantmentIndustry implements ModInitializer {
 		// 3. Finalize Registrate
 		REGISTRATE.register();
 
-		// 4. Manual Tab Injection
-		ItemGroupEvents.modifyEntriesEvent(AllCreativeModeTabs.BASE_CREATIVE_TAB.key()).register(content -> {
-			content.accept(CeiItems.ENCHANTING_GUIDE.get());
-			content.accept(CeiItems.HYPER_EXP_BOTTLE.get());
-			content.accept(CeiBlocks.DISENCHANTER.get());
-			content.accept(CeiBlocks.PRINTER.get());
-			content.accept(CeiBlocks.BLAZE_ENCHANTER.get());
-		});
+		// 4. MANUAL TAB INJECTION REMOVED
+		// The code that used ItemGroupEvents.modifyEntriesEvent... was causing the crash.
+		// Items now automatically go to the "CeiCreativeModeTabs" registered above.
 
 		// 5. FLUID STORAGE REGISTRATION - FIXES FILTERS
 		// Register Standard Experience Bottle
@@ -87,7 +87,6 @@ public class EnchantmentIndustry implements ModInitializer {
 			this.fluid = fluid;
 		}
 
-		// Changed from getBlankVariant to getBlankResource to match your API build
 		@Override
 		protected FluidVariant getBlankResource() {
 			return FluidVariant.blank();
@@ -110,7 +109,6 @@ public class EnchantmentIndustry implements ModInitializer {
 
 		@Override
 		protected ItemVariant getUpdatedVariant(ItemVariant itemVariant, FluidVariant fluidVariant, long amount) {
-			// Returns the same item because we are only using this for filter detection
 			return itemVariant;
 		}
 	}
