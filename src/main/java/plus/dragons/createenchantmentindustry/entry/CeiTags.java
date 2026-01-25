@@ -83,7 +83,6 @@ public class CeiTags {
 		}
 
 		BlockTag(NameSpace namespace, String path, boolean optional, boolean alwaysDatagen) {
-			// MANUAL FIX: Use toTagName instead of Catnip LANG
 			ResourceLocation id = new ResourceLocation(namespace.id, path == null ? toTagName(name()) : path);
 			tag = optionalTag(BuiltInRegistries.BLOCK, id);
 			this.alwaysDatagen = alwaysDatagen;
@@ -103,6 +102,7 @@ public class CeiTags {
 
 	public enum ItemTag {
 		INK_INGREDIENT(true),
+		PRINTER_INPUT(true), // FIXED: Added missing tag definition here
 		UPRIGHT_ON_BELT(NameSpace.CREATE, true);
 
 		public final TagKey<Item> tag;
@@ -133,7 +133,6 @@ public class CeiTags {
 		}
 
 		ItemTag(NameSpace namespace, String path, boolean optional, boolean alwaysDatagen) {
-			// MANUAL FIX: Use toTagName instead of Catnip LANG
 			ResourceLocation id = new ResourceLocation(namespace.id, path == null ? toTagName(name()) : path);
 			tag = optionalTag(BuiltInRegistries.ITEM, id);
 			this.alwaysDatagen = alwaysDatagen;
@@ -180,7 +179,6 @@ public class CeiTags {
 		}
 
 		FluidTag(NameSpace namespace, String path, boolean optional, boolean alwaysDatagen) {
-			// MANUAL FIX: Use toTagName instead of Catnip LANG
 			ResourceLocation id = new ResourceLocation(namespace.id, path == null ? toTagName(name()) : path);
 			tag = optionalTag(BuiltInRegistries.FLUID, id);
 			this.alwaysDatagen = alwaysDatagen;
@@ -213,5 +211,7 @@ public class CeiTags {
 		TagGen.CreateTagsProvider<Item> prov = new TagGen.CreateTagsProvider<>(pov, Item::builtInRegistryHolder);
 		prov.tag(ItemTag.INK_INGREDIENT.tag).add(Items.BLACK_DYE, Items.WITHER_ROSE, Items.INK_SAC);
 		prov.tag(ItemTag.UPRIGHT_ON_BELT.tag).add(Items.EXPERIENCE_BOTTLE);
+		// Optional: Add vanilla printable items to the tag so other mods can see them
+		prov.tag(ItemTag.PRINTER_INPUT.tag).add(Items.BOOK, Items.WRITTEN_BOOK, Items.ENCHANTED_BOOK, Items.NAME_TAG);
 	}
 }

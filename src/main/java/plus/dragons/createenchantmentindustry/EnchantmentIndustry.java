@@ -5,6 +5,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage; // IMPORT ADDED
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleVariantItemStorage;
 import net.minecraft.core.registries.Registries;
@@ -14,6 +15,7 @@ import net.minecraft.world.item.Items;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import plus.dragons.createenchantmentindustry.entry.*;
+import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.printer.PrinterBlockEntity; // IMPORT ADDED
 import plus.dragons.createenchantmentindustry.foundation.advancement.CeiAdvancements;
 import plus.dragons.createenchantmentindustry.foundation.advancement.CeiTriggers;
 import plus.dragons.createenchantmentindustry.foundation.config.CeiConfigs;
@@ -23,8 +25,6 @@ public class EnchantmentIndustry implements ModInitializer {
 	public static final String MOD_ID = ID;
 	public static final Logger LOGGER = LogManager.getLogger(ID);
 
-	// KEY FIX: Initialize REGISTRATE with the tab setting in one go.
-	// This ResourceKey must match the one used in CeiCreativeModeTabs.
 	public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(ID)
 			.setCreativeTab(ResourceKey.create(Registries.CREATIVE_MODE_TAB, new ResourceLocation(ID, "main")));
 
@@ -32,17 +32,10 @@ public class EnchantmentIndustry implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		// 1. Register the Creative Tab FIRST.
-		// This ensures the ResourceKey used above actually points to a valid tab.
 		CeiCreativeModeTabs.register();
-
-		// 2. Configs and Triggers
 		CeiConfigs.register();
 		CeiTriggers.register();
 
-		// 3. Register Content
-		// Since REGISTRATE is already configured with .setCreativeTab(),
-		// these items will automatically go to your custom tab.
 		CeiBlocks.register();
 		CeiItems.register();
 		CeiFluids.register();
@@ -52,10 +45,16 @@ public class EnchantmentIndustry implements ModInitializer {
 		CeiRecipeTypes.register();
 		CeiTags.register();
 
-		// 4. Finalize Registrate
 		REGISTRATE.register();
 
-		// 5. Fluid Storage Registration
+		// 4. Register Item Storage for Printer (CRITICAL for interaction)
+		// This allows players to insert books into the printer.
+		ItemStorage.SIDED.registerForBlockEntity(
+				(be, direction) -> ((PrinterBlockEntity) be).getItemStorage(direction),
+				CeiBlockEntities.PRINTER.get()
+		);
+
+		// 5. Fluid Storage
 		FluidStorage.ITEM.registerForItems((stack, context) ->
 						new FixedBottleStorage(context, FluidVariant.of(CeiFluids.EXPERIENCE)),
 				Items.EXPERIENCE_BOTTLE
@@ -66,13 +65,13 @@ public class EnchantmentIndustry implements ModInitializer {
 				CeiItems.HYPER_EXP_BOTTLE.get()
 		);
 
-		// 6. Secondary Systems
 		CeiAdvancements.register();
 		CeiPackets.registerPackets();
 
 		LOGGER.info("Create: Enchantment Industry initialized successfully!");
 	}
 
+	// ... (Keep the FixedBottleStorage class unchanged) ...
 	private static class FixedBottleStorage extends SingleVariantItemStorage<FluidVariant> {
 		private final FluidVariant fluid;
 

@@ -3,28 +3,42 @@ package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.p
 import com.simibubi.create.content.redstone.displayLink.DisplayLinkContext;
 import com.simibubi.create.content.redstone.displayLink.source.SingleLineDisplaySource;
 import com.simibubi.create.content.redstone.displayLink.target.DisplayTargetStats;
+import com.simibubi.create.foundation.utility.Components;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 
 public class PrinterDisplaySource extends SingleLineDisplaySource {
 
 	@Override
 	protected MutableComponent provideLine(DisplayLinkContext context, DisplayTargetStats stats) {
-		if (!(context.getSourceBlockEntity() instanceof PrinterBlockEntity printer))
-			return EMPTY_LINE;
+		if (context.getSourceBlockEntity() instanceof PrinterBlockEntity printer) {
+			if (printer.getCopyTarget().isEmpty()) {
+				return Component.translatable("create_enchantment_industry.gui.goggles.printer.no_target");
+			}
 
-		if (printer.getCopyTarget().isEmpty()) {
-			// Replaced LANG.translate(...) with Component.translatable(...)
-			return Component.translatable("gui.goggles.printer.no_target");
-		} else if (printer.printEntry != null) {
-			return printer.printEntry.getDisplaySourceContent(printer.getCopyTarget());
-		} else {
-			return EMPTY_LINE;
+			long requiredAmount = Printing.getRequiredAmountForItem(printer.getCopyTarget());
+			if (requiredAmount > 0) {
+				// Convert droplets to mB for display (81 droplets = 1 mB)
+				long mbAmount = requiredAmount / EnchantmentIndustry.UNIT_PER_MB;
+				return Component.translatable("create_enchantment_industry.gui.goggles.printer.cost", mbAmount);
+			}
 		}
+		return Component.empty();
 	}
 
 	@Override
-	protected boolean allowsLabeling(DisplayLinkContext context) {
+	public boolean allowsLabeling(DisplayLinkContext context) {
 		return false;
+	}
+
+	@Override
+	protected String getFlapDisplayLayoutName(DisplayLinkContext context) {
+		return "Instant";
+	}
+
+	@Override
+	protected String getTranslationKey() {
+		return "printer_source";
 	}
 }
