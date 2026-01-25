@@ -4,6 +4,8 @@ import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.UNIT_PE
 
 import javax.annotation.ParametersAreNonnullByDefault;
 
+import net.createmod.catnip.math.VecHelper;
+
 import org.spongepowered.asm.mixin.Mixin;
 
 import com.simibubi.create.content.equipment.wrench.IWrenchable;

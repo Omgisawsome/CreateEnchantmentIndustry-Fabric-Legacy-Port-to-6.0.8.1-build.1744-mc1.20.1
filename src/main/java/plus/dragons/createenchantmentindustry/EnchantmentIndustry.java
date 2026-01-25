@@ -1,41 +1,54 @@
 package plus.dragons.createenchantmentindustry;
 
-import com.simibubi.create.foundation.data.CreateRegistrate;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage; // IMPORT ADDED
-import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
-import net.fabricmc.fabric.api.transfer.v1.storage.base.SingleVariantItemStorage;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Items;
+import static net.fabricmc.fabric.api.transfer.v1.fluid.FluidConstants.BUCKET;
+
+import io.github.fabricators_of_create.porting_lib.data.ExistingFileHelper;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import plus.dragons.createenchantmentindustry.entry.*;
-import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.printer.PrinterBlockEntity; // IMPORT ADDED
+
+import com.simibubi.create.foundation.data.CreateRegistrate;
+
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.resources.ResourceLocation;
+import plus.dragons.createdragonlib.advancement.AdvancementFactory;
+import plus.dragons.createdragonlib.lang.Lang;
+import plus.dragons.createdragonlib.lang.LangFactory;
+import plus.dragons.createdragonlib.tag.TagGen;
+import plus.dragons.createenchantmentindustry.entry.CeiBlockEntities;
+import plus.dragons.createenchantmentindustry.entry.CeiBlocks;
+import plus.dragons.createenchantmentindustry.entry.CeiContainerTypes;
+import plus.dragons.createenchantmentindustry.entry.CeiEntityTypes;
+import plus.dragons.createenchantmentindustry.entry.CeiFluids;
+import plus.dragons.createenchantmentindustry.entry.CeiItems;
+import plus.dragons.createenchantmentindustry.entry.CeiPackets;
+import plus.dragons.createenchantmentindustry.entry.CeiRecipeTypes;
+import plus.dragons.createenchantmentindustry.entry.CeiTags;
 import plus.dragons.createenchantmentindustry.foundation.advancement.CeiAdvancements;
-import plus.dragons.createenchantmentindustry.foundation.advancement.CeiTriggers;
 import plus.dragons.createenchantmentindustry.foundation.config.CeiConfigs;
 
 public class EnchantmentIndustry implements ModInitializer {
-	public static final String ID = "create_enchantment_industry";
-	public static final String MOD_ID = ID;
-	public static final Logger LOGGER = LogManager.getLogger(ID);
+	public static final int UNIT_PER_MB = (int) (BUCKET / 1000);
+    public static final Logger LOGGER = LogManager.getLogger();
+    public static final String NAME = "Create Enchantment Industry";
+    public static final String ID = "create_enchantment_industry";
+    public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(ID);
+    public static final Lang LANG = new Lang(ID);
+    public static final AdvancementFactory ADVANCEMENT_FACTORY = AdvancementFactory.create(NAME, ID, CeiAdvancements::register);
+    public static final LangFactory LANG_FACTORY = LangFactory.create(NAME, ID)
+        .advancements(CeiAdvancements::register)
+        .tooltips()
+        .ui();
 
-	public static final CreateRegistrate REGISTRATE = CreateRegistrate.create(ID)
-			.setCreativeTab(ResourceKey.create(Registries.CREATIVE_MODE_TAB, new ResourceLocation(ID, "main")));
 
-	public static final int UNIT_PER_MB = 81;
+    public static ResourceLocation genRL(String name) {
+        return new ResourceLocation(ID, name);
+    }
 
 	@Override
 	public void onInitialize() {
-		CeiCreativeModeTabs.register();
-		CeiConfigs.register();
-		CeiTriggers.register();
-
 		CeiBlocks.register();
 		CeiItems.register();
 		CeiFluids.register();
@@ -45,68 +58,26 @@ public class EnchantmentIndustry implements ModInitializer {
 		CeiRecipeTypes.register();
 		CeiTags.register();
 
+		// fabric exclusive, squeeze this in here to register before stuff is used
 		REGISTRATE.register();
 
-		// 4. Register Item Storage for Printer (CRITICAL for interaction)
-		// This allows players to insert books into the printer.
-		ItemStorage.SIDED.registerForBlockEntity(
-				(be, direction) -> ((PrinterBlockEntity) be).getItemStorage(direction),
-				CeiBlockEntities.PRINTER.get()
-		);
+		CeiConfigs.register();
 
-		// 5. Fluid Storage
-		FluidStorage.ITEM.registerForItems((stack, context) ->
-						new FixedBottleStorage(context, FluidVariant.of(CeiFluids.EXPERIENCE)),
-				Items.EXPERIENCE_BOTTLE
-		);
-
-		FluidStorage.ITEM.registerForItems((stack, context) ->
-						new FixedBottleStorage(context, FluidVariant.of(CeiFluids.HYPER_EXPERIENCE)),
-				CeiItems.HYPER_EXP_BOTTLE.get()
-		);
-
+		CeiFluids.registerLavaReaction();
 		CeiAdvancements.register();
 		CeiPackets.registerPackets();
 
-		LOGGER.info("Create: Enchantment Industry initialized successfully!");
+		ServerTickEvents.START_WORLD_TICK.register(CeiFluids::handleInkEffect);
+
+		CeiPackets.getChannel().initServerListener();
 	}
 
-	// ... (Keep the FixedBottleStorage class unchanged) ...
-	private static class FixedBottleStorage extends SingleVariantItemStorage<FluidVariant> {
-		private final FluidVariant fluid;
-
-		public FixedBottleStorage(ContainerItemContext context, FluidVariant fluid) {
-			super(context);
-			this.fluid = fluid;
-		}
-
-		@Override
-		protected FluidVariant getBlankResource() {
-			return FluidVariant.blank();
-		}
-
-		@Override
-		protected long getCapacity(FluidVariant variant) {
-			return 250L * UNIT_PER_MB;
-		}
-
-		@Override
-		protected FluidVariant getResource(ItemVariant itemVariant) {
-			return fluid;
-		}
-
-		@Override
-		protected long getAmount(ItemVariant itemVariant) {
-			return 250L * UNIT_PER_MB;
-		}
-
-		@Override
-		protected ItemVariant getUpdatedVariant(ItemVariant itemVariant, FluidVariant fluidVariant, long amount) {
-			return itemVariant;
-		}
-	}
-
-	public static ResourceLocation genRL(String path) {
-		return new ResourceLocation(ID, path);
+	public static void gatherData(FabricDataGenerator gen, ExistingFileHelper helper) {
+		ADVANCEMENT_FACTORY.datagen(gen);
+		new TagGen.Builder()
+				.addItemTagFactory(CeiTags::genItemTag)
+				.addFluidTagFactory(CeiTags::genFluidTag)
+				.build().activate();
+		LANG_FACTORY.datagen(gen);
 	}
 }

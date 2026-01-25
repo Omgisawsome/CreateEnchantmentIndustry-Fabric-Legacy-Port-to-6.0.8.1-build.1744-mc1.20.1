@@ -3,6 +3,7 @@ package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.e
 import java.util.ArrayList;
 import java.util.List;
 
+import net.createmod.catnip.lang.Lang;
 import net.minecraft.world.level.storage.loot.LootParams;
 
 import org.jetbrains.annotations.Nullable;

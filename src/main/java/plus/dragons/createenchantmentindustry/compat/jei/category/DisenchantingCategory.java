@@ -1,5 +1,7 @@
 package plus.dragons.createenchantmentindustry.compat.jei.category;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 import com.simibubi.create.compat.jei.category.CreateRecipeCategory;
 import com.simibubi.create.foundation.gui.AllGuiTextures;
 
@@ -10,21 +12,17 @@ import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
 import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.disenchanter.DisenchantRecipe;
 import plus.dragons.createenchantmentindustry.entry.CeiFluids;
 
-// FABRIC NATIVE IMPORTS
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
-import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
-
+@ParametersAreNonnullByDefault
 public class DisenchantingCategory extends CreateRecipeCategory<DisenchantRecipe> {
 
-	private final IDrawable disenchanter = new DisenchanterDrawable();
+    private final IDrawable disenchanter = new DisenchanterDrawable();
 
-	public DisenchantingCategory(Info<DisenchantRecipe> info) {
-		super(info);
-	}
+    public DisenchantingCategory(Info<DisenchantRecipe> info) {
+        super(info);
+    }
 
 	@Override
 	public void setRecipe(IRecipeLayoutBuilder builder, DisenchantRecipe recipe, IFocusGroup focuses) {
@@ -34,19 +32,8 @@ public class DisenchantingCategory extends CreateRecipeCategory<DisenchantRecipe
 
 		builder.addSlot(RecipeIngredientRole.OUTPUT, 139, 25)
 				.setBackground(getRenderedSlot(), -1, -1)
-				// REMOVED .get() - EXPERIENCE is now the fluid itself
-				.addFluidStack(CeiFluids.EXPERIENCE, recipe.getExperience()).addRichTooltipCallback((recipeSlotView, tooltip) -> {
-					long amount = recipe.getExperience();
-					if (amount > 0) {
-						// REMOVED .get() - EXPERIENCE is now the fluid itself
-						FluidVariant variant = FluidVariant.of(CeiFluids.EXPERIENCE);
-						Component name = FluidVariantAttributes.getName(variant);
-
-						tooltip.add(name.copy()
-								.append(" ")
-								.append(Component.literal(String.valueOf(amount)).append("mB")));
-					}
-				});
+				.addFluidStack(CeiFluids.EXPERIENCE.get().getSource(),recipe.getExperience());
+				//.addTooltipCallback(addFluidTooltip(recipe.getExperience()));
 
 		if(!recipe.hasNoResult())
 			builder.addSlot(RecipeIngredientRole.OUTPUT, 139, 5)

@@ -4,6 +4,8 @@ import com.mojang.math.Axis;
 import com.simibubi.create.foundation.gui.CustomLightingSettings;
 
 import mezz.jei.api.gui.drawable.IDrawable;
+import net.createmod.catnip.gui.ILightingSettings;
+import net.createmod.catnip.gui.element.GuiGameElement;
 import net.minecraft.client.gui.GuiGraphics;
 import plus.dragons.createenchantmentindustry.entry.CeiBlocks;
 

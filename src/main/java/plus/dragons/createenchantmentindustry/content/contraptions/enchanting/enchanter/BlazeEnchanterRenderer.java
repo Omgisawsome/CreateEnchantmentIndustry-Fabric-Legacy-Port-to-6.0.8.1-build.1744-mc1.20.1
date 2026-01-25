@@ -1,16 +1,22 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter;
 
+import static plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter.BlazeEnchanterBlockEntity.ENCHANTING_TIME;
+
 import java.util.Set;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import com.simibubi.create.AllPartialModels;
+import com.simibubi.create.content.kinetics.belt.transport.TransportedItemStack;
 import com.simibubi.create.foundation.blockEntity.renderer.SmartBlockEntityRenderer;
 
+import dev.engine_room.flywheel.lib.model.baked.PartialModel;
+import io.github.fabricators_of_create.porting_lib.models.util.TransformationHelper;
+import net.createmod.catnip.animation.AnimationTickHolder;
+import net.createmod.catnip.math.AngleHelper;
 import net.createmod.catnip.render.CachedBuffers;
 import net.createmod.catnip.render.SuperByteBuffer;
-import net.createmod.catnip.math.AngleHelper;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.BookModel;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -27,129 +33,176 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import org.joml.Quaternionf;
+
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
-import plus.dragons.createenchantmentindustry.entry.CeiBlockPartials;
+import plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter.BlazeEnchanterBlock.HeatLevel;
 
 public class BlazeEnchanterRenderer extends SmartBlockEntityRenderer<BlazeEnchanterBlockEntity> {
+    public static final Material BOOK_MATERIAL = new Material(TextureAtlas.LOCATION_BLOCKS, EnchantmentIndustry.genRL("block/blaze_enchanter_book"));
+    private static final float PI = 3.14159265358979323846f;
+    private final BookModel bookModel;
 
-	public static final Material BOOK_MATERIAL = new Material(
-			TextureAtlas.LOCATION_BLOCKS,
-			EnchantmentIndustry.genRL("block/blaze_enchanter_book")
-	);
+    public BlazeEnchanterRenderer(BlockEntityRendererProvider.Context context) {
+        super(context);
+        this.bookModel = new BookModel(context.bakeLayer(ModelLayers.BOOK));
+    }
 
-	private final BookModel bookModel;
+    @Override
+    protected void renderSafe(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer, int light, int overlay) {
+        super.renderSafe(be, partialTicks, ps, buffer, light, overlay);
+        float horizontalAngle = AngleHelper.rad(be.headAngle.getValue(partialTicks));
+        float animation = be.headAnimation.getValue(partialTicks) * .175f;
 
-	public BlazeEnchanterRenderer(BlockEntityRendererProvider.Context context) {
-		super(context);
-		this.bookModel = new BookModel(context.bakeLayer(ModelLayers.BOOK));
-	}
+        ps.pushPose();
 
-	@Override
-	protected void renderSafe(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer,
-							  int light, int overlay) {
+        renderItem(be, partialTicks, animation, ps, buffer, light, overlay);
+        renderBlaze(be, horizontalAngle, animation, ps, buffer);
+        renderBook(be, partialTicks, horizontalAngle, ps, buffer);
 
-		renderBlaze(be, partialTicks, ps, buffer, light, overlay);
-		renderBook(be, partialTicks, ps, buffer, light, overlay);
-		renderItem(be, partialTicks, ps, buffer, light, overlay);
-	}
+        ps.popPose();
+    }
 
-	private void renderBlaze(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer,
-							 int light, int overlay) {
-		ps.pushPose();
-		ps.translate(0.5, 0, 0.5);
-		float headAngle = AngleHelper.rad(Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle));
-		ps.mulPose(Axis.YP.rotation(headAngle));
-		ps.translate(-0.5, 0, -0.5);
+    protected void renderItem(BlazeEnchanterBlockEntity be,
+                              float partialTicks, float animation,
+                              PoseStack ps, MultiBufferSource buffer, int light, int overlay) {
+        TransportedItemStack transported = be.heldItem;
+        if (transported == null)
+            return;
 
-		boolean active = be.processingTicks > 0;
-		boolean hyper = be.hyper();
+        Direction insertedFrom = transported.insertedFrom;
+        boolean horizontal = insertedFrom.getAxis().isHorizontal();
 
-		SuperByteBuffer blazeBuffer;
-		if (active) {
-			blazeBuffer = CachedBuffers.partial(
-					hyper ? CeiBlockPartials.BLAZE_ENCHANTER_ACTIVE_HYPER : CeiBlockPartials.BLAZE_ENCHANTER_ACTIVE,
-					be.getBlockState()
-			);
-		} else {
-			blazeBuffer = CachedBuffers.partial(
-					hyper ? CeiBlockPartials.BLAZE_ENCHANTER_IDLE_HYPER : CeiBlockPartials.BLAZE_ENCHANTER_IDLE,
-					be.getBlockState()
-			);
-		}
+        ps.pushPose();
 
-		blazeBuffer
-				.light(LightTexture.FULL_BRIGHT)
-				.renderInto(ps, buffer.getBuffer(RenderType.translucent()));
+        HeatLevel heatLevel = be.getBlockState().getValue(BlazeEnchanterBlock.HEAT_LEVEL);
+        boolean active = be.processingTicks > 0 && be.processingTicks < 200;
+        float renderTick = AnimationTickHolder.getRenderTime(be.getLevel()) + (be.hashCode() % 13) * 16f;
+        float beltOffset = horizontal ? Mth.lerp(partialTicks, transported.prevBeltPosition, transported.beltPosition) : .5f;
+        float movingProgress = Mth.sin((1 - 2 * Mth.abs(.5f - beltOffset)) * PI / 2);
+        float verticalOffsetMult = heatLevel.isAtLeast(HeatLevel.KINDLED) ? 64 : 16;
+        float verticalOffset = movingProgress * 5 / 8
+                + Mth.sin((renderTick / 16f) % (2 * PI)) / verticalOffsetMult
+                + animation * .75f;
+        ps.translate(.5f, 3 / 4f + verticalOffset, .5f);
 
-		ps.popPose();
-	}
+        Vec3 offsetVec = Vec3.atLowerCornerOf(insertedFrom.getOpposite().getNormal()).scale(.5f - beltOffset);
+        ps.translate(offsetVec.x, 0, offsetVec.z);
 
-	private void renderBook(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer, int light, int overlay) {
-		if (be.targetItem.isEmpty()) return;
+        if (horizontal) {
+            float sideOffset = Mth.lerp(partialTicks, transported.prevSideOffset, transported.sideOffset);
+            sideOffset = Mth.lerp(movingProgress, sideOffset, 0);
+            boolean alongX = insertedFrom.getClockWise().getAxis() == Direction.Axis.X;
+            ps.translate(alongX ? sideOffset : 0, 0, alongX ? 0 : -sideOffset);
+        }
 
-		ps.pushPose();
+        float rot = active
+                ? (ENCHANTING_TIME - be.processingTicks + partialTicks) / 16 % (2 * PI)
+                : renderTick / 16f % (2 * PI);
+        float rotX = active ? rot + PI / 2 : 0;
+        float rotY = rot + PI + transported.angle * movingProgress;
+        float rotZ = active ? rot : 0;
+        ps.mulPose(TransformationHelper.quatFromXYZ(rotX, rotY, rotZ, false));
 
-		// Height adjustment
-		ps.translate(0.5, 0.825, 0.5);
+        ps.scale(0.5f, 0.5f, 0.5f);
 
-		float time = (float) be.getLevel().getGameTime() + partialTicks;
-		ps.translate(0, Mth.sin(time * 0.1f) * 0.05f, 0);
-
-		float headAngle = AngleHelper.rad(Mth.lerp(partialTicks, be.oHeadAngle, be.headAngle));
-
-		// Rotates the same way as the blaze
-		ps.mulPose(Axis.YP.rotation(headAngle + (float)Math.PI / 2));
-
-		ps.mulPose(Axis.ZP.rotationDegrees(80.0f));
-
-		float flip = Mth.lerp(partialTicks, be.oFlip, be.flip);
-		float page0 = Mth.frac(flip + 0.25f) * 1.6f - 0.3f;
-		float page1 = Mth.frac(flip + 0.75f) * 1.6f - 0.3f;
-
-		bookModel.setupAnim(time, Mth.clamp(page0, 0.0f, 1.0f), Mth.clamp(page1, 0.0f, 1.0f), 1.0f);
-		VertexConsumer vc = BOOK_MATERIAL.buffer(buffer, RenderType::entitySolid);
-		bookModel.render(ps, vc, light, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
-		ps.popPose();
-	}
-
-	private void renderItem(BlazeEnchanterBlockEntity be, float partialTicks, PoseStack ps, MultiBufferSource buffer,
-							int light, int overlay) {
-		if (be.heldItem == null) return;
-
-		var transported = be.heldItem;
-		Direction insertedFrom = transported.insertedFrom;
-		if (insertedFrom == null) insertedFrom = Direction.UP;
-
-		boolean horizontal = insertedFrom.getAxis().isHorizontal();
-
-		ps.pushPose();
-		float beltOffset = horizontal ? Mth.lerp(partialTicks, transported.prevBeltPosition, transported.beltPosition) : 0.5f;
-
-		float time = (float) be.getLevel().getGameTime() + partialTicks;
-		float bob = Mth.sin(time * 0.2f) * 0.05f;
-
-		// CHANGED: Increased height to 1.25 (+2 pixels)
-		ps.translate(0.5, 1.25 + bob, 0.5);
-
-		Vec3 offsetVec = Vec3.atLowerCornerOf(insertedFrom.getOpposite().getNormal()).scale(0.5f - beltOffset);
-		ps.translate(offsetVec.x, 0, offsetVec.z);
-
-		// CHANGED: 4x Faster Speed (15 * 4 = 60.0f)
-		ps.mulPose(Axis.YP.rotationDegrees(time * 30.0f));
-		ps.mulPose(Axis.XP.rotationDegrees(time * 30.0f));
-
-		ps.scale(0.5f, 0.5f, 0.5f);
-
-		ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
+        ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
 		itemRenderer.renderStatic(transported.stack, ItemDisplayContext.FIXED, light, overlay, ps, buffer, be.getLevel(), 0);
-		ps.popPose();
-	}
 
-	public static void loadTexture(ResourceLocation atlas, Set<ResourceLocation> sprites) {
-		if (atlas.equals(InventoryMenu.BLOCK_ATLAS)) {
-			sprites.add(BOOK_MATERIAL.texture());
+        ps.popPose();
+    }
+
+    protected void renderBlaze(BlazeEnchanterBlockEntity be,
+                               float horizontalAngle, float animation,
+                               PoseStack ps, MultiBufferSource buffer) {
+        BlockState blockState = be.getBlockState();
+        HeatLevel heatLevel = blockState.getValue(BlazeEnchanterBlock.HEAT_LEVEL);
+        boolean smouldering = heatLevel == HeatLevel.SMOULDERING;
+        boolean active = be.processingTicks > 0 && be.processingTicks < 200;
+        float time = AnimationTickHolder.getRenderTime(be.getLevel());
+        float renderTick = time + (be.hashCode() % 13) * 16f;
+        float offsetMult = heatLevel.isAtLeast(HeatLevel.KINDLED) ? 64 : 16;
+        float offset = Mth.sin((float) ((renderTick / 16f) % (2 * Math.PI))) / offsetMult;
+        float offset1 = Mth.sin((float) ((renderTick / 16f + Math.PI) % (2 * Math.PI))) / offsetMult;
+        float offset2 = Mth.sin((float) ((renderTick / 16f + Math.PI / 2) % (2 * Math.PI))) / offsetMult;
+        float headY = offset + (animation * .75f);
+        VertexConsumer solid = buffer.getBuffer(RenderType.solid());
+
+        ps.pushPose();
+        ps.translate(0, .125, 0);
+
+        PartialModel blazeModel = switch (heatLevel) {
+            case SEETHING -> active ? AllPartialModels.BLAZE_SUPER_ACTIVE : AllPartialModels.BLAZE_SUPER;
+            case KINDLED -> active ? AllPartialModels.BLAZE_ACTIVE : AllPartialModels.BLAZE_IDLE;
+            default -> AllPartialModels.BLAZE_INERT;
+        };
+
+        SuperByteBuffer blazeBuffer = CachedBuffers.partial(blazeModel, blockState);
+        blazeBuffer.translate(0, headY, 0);
+        draw(blazeBuffer, horizontalAngle, ps, solid);
+
+        if (be.goggles) {
+            PartialModel gogglesModel = blazeModel == AllPartialModels.BLAZE_INERT
+                    ? AllPartialModels.BLAZE_GOGGLES_SMALL : AllPartialModels.BLAZE_GOGGLES;
+
+            SuperByteBuffer gogglesBuffer = CachedBuffers.partial(gogglesModel, blockState);
+            gogglesBuffer.translate(0, headY + 8 / 16f, 0);
+            draw(gogglesBuffer, horizontalAngle, ps, solid);
+        }
+
+        if (!smouldering) {
+            PartialModel rodsModel = heatLevel == HeatLevel.SEETHING
+                    ? AllPartialModels.BLAZE_BURNER_SUPER_RODS
+                    : AllPartialModels.BLAZE_BURNER_RODS;
+            PartialModel rodsModel2 = heatLevel == HeatLevel.SEETHING
+                    ? AllPartialModels.BLAZE_BURNER_SUPER_RODS_2
+                    : AllPartialModels.BLAZE_BURNER_RODS_2;
+            SuperByteBuffer rodsBuffer = CachedBuffers.partial(rodsModel, blockState);
+            rodsBuffer.translate(0, offset1 + animation + .125f, 0)
+                    .light(LightTexture.FULL_BRIGHT)
+                    .renderInto(ps, solid);
+
+            SuperByteBuffer rodsBuffer2 = CachedBuffers.partial(rodsModel2, blockState);
+            rodsBuffer2.translate(0, offset2 + animation - 3 / 16f, 0)
+                    .light(LightTexture.FULL_BRIGHT)
+                    .renderInto(ps, solid);
+        }
+
+        ps.popPose();
+    }
+
+    protected void renderBook(BlazeEnchanterBlockEntity be,
+                              float partialTicks, float horizontalAngle,
+                              PoseStack ps, MultiBufferSource buffer) {
+        ps.pushPose();
+
+        ps.translate(0.5, 0.25, 0.5);
+        float time = AnimationTickHolder.getRenderTime(be.getLevel());
+        ps.translate(0.0, 0.1f + Mth.sin(time * 0.1f) * 0.01, 0.0);
+        ps.mulPose(Axis.YP.rotation(horizontalAngle + PI / 2));
+        ps.mulPose(Axis.ZP.rotationDegrees(80.0f));
+        float flip = Mth.lerp(partialTicks, be.oFlip, be.flip);
+        float page0 = Mth.frac(flip + 0.25f) * 1.6f - 0.3f;
+        float page1 = Mth.frac(flip + 0.75f) * 1.6f - 0.3f;
+        this.bookModel.setupAnim(time, Mth.clamp(page0, 0.0f, 1.0f), Mth.clamp(page1, 0.0f, 1.0f), 1);
+        VertexConsumer vertexconsumer = BOOK_MATERIAL.buffer(buffer, RenderType::entitySolid);
+        this.bookModel.render(ps, vertexconsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+
+        ps.popPose();
+    }
+
+    private void draw(SuperByteBuffer buffer, float horizontalAngle, PoseStack ps, VertexConsumer vc) {
+        buffer.rotateCentered(horizontalAngle, Direction.UP)
+                .light(LightTexture.FULL_BRIGHT)
+                .renderInto(ps, vc);
+    }
+
+	public static void loadTexture(ResourceLocation location, Set<ResourceLocation> sprites){
+		if (location.equals(InventoryMenu.BLOCK_ATLAS)) {
+			sprites.add(BlazeEnchanterRenderer.BOOK_MATERIAL.texture());
 		}
 	}
 }

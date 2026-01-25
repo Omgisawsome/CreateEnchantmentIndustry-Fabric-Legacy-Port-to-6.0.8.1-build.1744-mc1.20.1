@@ -9,8 +9,10 @@ import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
 import plus.dragons.createenchantmentindustry.entry.CeiBlocks;
 import plus.dragons.createenchantmentindustry.entry.CeiItems;
 
-public class CeiPonderTag {
+public class CeiPonderTags {
 	public static final ResourceLocation EXPERIENCE = EnchantmentIndustry.genRL("experience");
+
+	public CeiPonderTags() {}
 
 	public static void register(PonderTagRegistrationHelper<ResourceLocation> helper) {
 		helper.registerTag(EXPERIENCE).

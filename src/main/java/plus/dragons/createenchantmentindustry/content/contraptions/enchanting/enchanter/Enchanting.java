@@ -2,10 +2,12 @@ package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.e
 
 import static plus.dragons.createenchantmentindustry.EnchantmentIndustry.UNIT_PER_MB;
 
-import java.util.HashMap;
 import java.util.Map;
 
+import net.createmod.catnip.data.Pair;
+
 import org.jetbrains.annotations.Nullable;
+
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -14,104 +16,86 @@ import plus.dragons.createenchantmentindustry.entry.CeiItems;
 
 public class Enchanting {
 
-	public static class Pair<F, S> {
-		private final F first;
-		private final S second;
+    @Nullable
+    public static EnchantmentEntry getTargetEnchantment(ItemStack itemStack, boolean hyper) {
+        if (itemStack.is(CeiItems.ENCHANTING_GUIDE.get())) {
+            var result = EnchantingGuideItem.getEnchantment(itemStack);
+            if (!hyper || result == null)
+                return result;
+            else {
+                var enchantment = result.getFirst();
+                int level = result.getSecond() + 1;
+                return EnchantmentEntry.of(enchantment, level);
+            }
+        } else
+            throw new RuntimeException("TargetItem is not an enchanting guide for blaze!");
+    }
 
-		// FIXED: Changed to protected so EnchantmentEntry can extend it
-		protected Pair(F first, S second) {
-			this.first = first;
-			this.second = second;
-		}
+    @Nullable
+    public static EnchantmentEntry getValidEnchantment(ItemStack itemStack, ItemStack targetItem, boolean hyper) {
+        var entry = getTargetEnchantment(targetItem, hyper);
+        if (entry == null || !entry.valid())
+            return null;
+        var enchantment = entry.getFirst();
 
-		public static <F, S> Pair<F, S> of(F first, S second) {
-			return new Pair<>(first, second);
-		}
+        ItemStack toCheck = itemStack.copy();
+        Map<Enchantment, Integer> modified = EnchantmentHelper.getEnchantments(toCheck);
 
-		public F getFirst() { return first; }
-		public S getSecond() { return second; }
-	}
+        if (modified.containsKey(enchantment) && modified.get(enchantment) >= entry.getSecond()) {
+            return null;
+        }
 
-	@Nullable
-	public static EnchantmentEntry getTargetEnchantment(ItemStack itemStack, boolean hyper) {
-		if (itemStack.is(CeiItems.ENCHANTING_GUIDE.get())) {
-			// FIXED: Corrected class name from EnchantmentGuideItem to EnchantingGuideItem
-			var result = EnchantingGuideItem.getEnchantment(itemStack);
-			if (result == null) return null;
-			if (!hyper) return result;
+        // If the item already has the enchantment remove it to pass the checks
+        modified.remove(enchantment);
+        EnchantmentHelper.setEnchantments(modified, toCheck);
 
-			// Hyper-enchanting logic: Add +1 level
-			return EnchantmentEntry.of(result.getFirst(), result.getSecond() + 1);
-		}
-		return null;
-	}
+        if (!enchantment.canEnchant(toCheck))
+            return null;
+        for (var e : modified.entrySet()) {
+            if (!e.getKey().isCompatibleWith(enchantment))
+                return null;
+        }
+        return entry;
+    }
 
-	@Nullable
-	public static EnchantmentEntry getValidEnchantment(ItemStack itemStack, ItemStack targetItem, boolean hyper) {
-		var entry = getTargetEnchantment(targetItem, hyper);
-		if (entry == null || !entry.valid())
-			return null;
+    public static void enchantItem(ItemStack itemStack, Pair<Enchantment, Integer> enchantment) {
+        var map = EnchantmentHelper.getEnchantments(itemStack);
+        map.put(enchantment.getFirst(), enchantment.getSecond());
+        EnchantmentHelper.setEnchantments(map, itemStack);
+    }
 
-		Enchantment enchantment = entry.getFirst();
-		int targetLevel = entry.getSecond();
+    public static int expPointFromLevel(int level) {
+        if (level > 31) {
+            return (int) (4.5 * level * level - 162.5 * level + 2220);
+        } else {
+            return level > 16
+                ? (int) (2.5 * level * level - 40.5 * level + 360)
+                : level * level + 6 * level;
+        }
+    }
 
-		// 1. Check if the item already has this enchantment at an equal or higher level
-		int currentLevel = EnchantmentHelper.getItemEnchantmentLevel(enchantment, itemStack);
-		if (currentLevel >= targetLevel) {
-			return null;
-		}
+    public static int expPointForNextLevel(int level) {
+        if (level > 30) {
+            return 9 * level - 158;
+        } else {
+            return level > 15
+                ? 5 * level -38
+                : 2 * level + 7;
+        }
+    }
 
-		// 2. Compatibility Check
-		// We create a mutable copy of the enchantments to simulate the result
-		Map<Enchantment, Integer> existingEnchantments = EnchantmentHelper.getEnchantments(itemStack);
+    public static int rarityLevel(Enchantment.Rarity rarity) {
+        return switch(rarity) {
+            case COMMON -> 1;
+            case UNCOMMON -> 2;
+            case RARE -> 3;
+            case VERY_RARE -> 4;
+        };
+    }
 
-		// Verify compatibility with existing enchantments on the item
-		for (Enchantment existing : existingEnchantments.keySet()) {
-			if (existing != enchantment && !existing.isCompatibleWith(enchantment)) {
-				return null;
-			}
-		}
+    public static int getExperienceConsumption(Enchantment enchantment, int level) {
+        int xpLevel = enchantment.getMinCost(level) + level * rarityLevel(enchantment.getRarity());
+        return expPointForNextLevel(xpLevel) * UNIT_PER_MB;
+    }
 
-		// 3. Item Validity
-		// Note: Books are handled specifically by Blaze Enchanter logic in the BE
-		if (!enchantment.canEnchant(itemStack) && !itemStack.is(net.minecraft.world.item.Items.BOOK)) {
-			// If it's not a book and the enchantment can't go on this item, fail.
-			// Exception: If the item is already enchanted with it (checked above), we allow upgrading.
-			if (currentLevel == 0) return null;
-		}
-
-		return entry;
-	}
-
-	public static void enchantItem(ItemStack itemStack, Pair<Enchantment, Integer> enchantment) {
-		Map<Enchantment, Integer> map = new HashMap<>(EnchantmentHelper.getEnchantments(itemStack));
-		map.put(enchantment.getFirst(), enchantment.getSecond());
-		EnchantmentHelper.setEnchantments(map, itemStack);
-	}
-
-	// Experience math for 1.20.1
-	public static int expPointFromLevel(int level) {
-		if (level >= 31) return (int) (4.5 * level * level - 162.5 * level + 2220);
-		if (level >= 16) return (int) (2.5 * level * level - 40.5 * level + 360);
-		return level * level + 6 * level;
-	}
-
-	public static int expPointForNextLevel(int level) {
-		if (level >= 30) return 9 * level - 158;
-		if (level >= 15) return 5 * level - 38;
-		return 2 * level + 7;
-	}
-
-	public static int getExperienceConsumption(Enchantment enchantment, int level) {
-		// Calculate a base cost based on rarity and level
-		int weight = switch (enchantment.getRarity()) {
-			case COMMON -> 1;
-			case UNCOMMON -> 2;
-			case RARE -> 4;
-			case VERY_RARE -> 8;
-		};
-
-		int cost = (enchantment.getMinCost(level) + (level * weight));
-		return cost * (int) UNIT_PER_MB;
-	}
 }

@@ -1,5 +1,7 @@
 package plus.dragons.createenchantmentindustry.foundation.mixin;
 
+import net.createmod.catnip.math.VecHelper;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

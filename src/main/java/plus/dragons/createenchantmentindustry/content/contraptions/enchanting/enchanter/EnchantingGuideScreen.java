@@ -1,132 +1,109 @@
 package plus.dragons.createenchantmentindustry.content.contraptions.enchanting.enchanter;
 
-import java.util.Collections;
-import java.util.List;
-
-import org.jetbrains.annotations.Nullable;
-
 import com.google.common.collect.ImmutableList;
 import com.simibubi.create.foundation.gui.menu.AbstractSimiContainerScreen;
 import com.simibubi.create.foundation.gui.widget.Label;
 import com.simibubi.create.foundation.gui.widget.SelectionScrollInput;
 
+import net.createmod.catnip.gui.element.GuiGameElement;
+import net.createmod.catnip.platform.CatnipServices;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
 import plus.dragons.createenchantmentindustry.entry.CeiPackets;
-import plus.dragons.createenchantmentindustry.foundation.gui.CeiGuiTextures;
+
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 
 import static com.simibubi.create.foundation.gui.AllGuiTextures.PLAYER_INVENTORY;
+import static plus.dragons.createenchantmentindustry.foundation.gui.CeiGuiTextures.ENCHANTING_GUIDE;
 
 public class EnchantingGuideScreen extends AbstractSimiContainerScreen<EnchantingGuideMenu> {
+    private static final int ENCHANTING_GUIDE_WIDTH = 178;
+    private List<Rect2i> extraAreas = Collections.emptyList();
+    public int index;
+    public SelectionScrollInput scrollInput;
+    public Label scrollInputLabel;
+    private final boolean directItemStackEdit;
+    @Nullable
+    private final BlockPos blockPos;
 
-	private static final int ENCHANTING_GUIDE_WIDTH = 178;
-	private static final int TEXTURE_WIDTH = 188;
-	private static final int TEXTURE_HEIGHT = 92;
+    public EnchantingGuideScreen(EnchantingGuideMenu container, Inventory inv, Component title) {
+        super(container, inv, title);
+        directItemStackEdit = container.directItemStackEdit;
+        blockPos = container.blockPos;
+    }
 
-	private List<Rect2i> extraAreas = Collections.emptyList();
-	public int index;
-	public SelectionScrollInput scrollInput;
-	public Label scrollInputLabel;
-	private final boolean directItemStackEdit;
-	@Nullable
-	private final BlockPos blockPos;
+    public void updateScrollInput(boolean resetIndex) {
+        if (resetIndex) {
+            index = 0;
+        }
 
-	public EnchantingGuideScreen(EnchantingGuideMenu container, Inventory inv, Component title) {
-		super(container, inv, title);
-		this.directItemStackEdit = container.directItemStackEdit;
-		this.blockPos = container.blockPos;
-	}
+        scrollInput.forOptions(menu.enchantments);
+        scrollInput.setState(index);
+    }
 
-	public void updateScrollInput(boolean resetIndex) {
-		if (resetIndex) index = 0;
-		if (scrollInput != null) {
-			scrollInput.forOptions(menu.enchantments);
-			// Safety check to ensure index is within bounds
-			if (index >= menu.enchantments.size()) index = 0;
+    @Override
+    protected void init() {
+        setWindowSize(
+                ENCHANTING_GUIDE.width,
+                ENCHANTING_GUIDE.height + 4 + PLAYER_INVENTORY.getHeight()
+        );
+        setWindowOffset(-32, 0);
+        super.init();
+        int guideX = getLeftOfCentered(ENCHANTING_GUIDE_WIDTH);
+        int guideY = topPos;
+        extraAreas = ImmutableList.of(
+                new Rect2i(guideX + ENCHANTING_GUIDE.width, guideY + ENCHANTING_GUIDE.height - 48, 48, 48),
+                new Rect2i(guideX, guideY, imageWidth, imageHeight)
+        );
+        index = menu.contentHolder.getOrCreateTag().getInt("index");
+        scrollInput = new SelectionScrollInput(guideX + 40, guideY + 22, 120, 16);
+        scrollInputLabel = new Label(guideX + 43, guideY + 26, CommonComponents.EMPTY).withShadow();
+        scrollInput.calling(index -> this.index = index).writingTo(scrollInputLabel);
+        addRenderableWidget(scrollInputLabel);
+        addRenderableWidget(scrollInput);
+        updateScrollInput(false);
+    }
 
-			scrollInput.setState(index);
+    @Override
+    protected void renderBg(GuiGraphics pGuiGraphics, float pPartialTick, int pMouseX, int pMouseY) {
+        int invX = getLeftOfCentered(PLAYER_INVENTORY.getWidth());
+        int invY = topPos + ENCHANTING_GUIDE.height + 4;
+        renderPlayerInventory(pGuiGraphics, invX, invY);
 
-			// FIX: Force the label to update its text immediately.
-			// The ScrollInput widget often skips updating the label if the index number didn't change (e.g. 0 -> 0),
-			// even if the text at that index (No Enchantment -> Sharpness I) did change.
-			if (index >= 0 && index < menu.enchantments.size()) {
-				scrollInputLabel.text = menu.enchantments.get(index);
-			}
-		}
-	}
+        int guideX = getLeftOfCentered(ENCHANTING_GUIDE_WIDTH);
+        int guideY = topPos;
 
-	@Override
-	protected void init() {
-		setWindowSize(
-				TEXTURE_WIDTH,
-				TEXTURE_HEIGHT + 4 + PLAYER_INVENTORY.getHeight()
-		);
-		setWindowOffset(-32, 0);
-		super.init();
+        ENCHANTING_GUIDE.render(pGuiGraphics, guideX, guideY);
+        pGuiGraphics.drawCenteredString(font, title, guideX + ENCHANTING_GUIDE_WIDTH / 2, guideY + 3, 0xFFFFFF);
 
-		int guideX = getLeftOfCentered(ENCHANTING_GUIDE_WIDTH);
-		int guideY = topPos;
+        GuiGameElement.of(menu.contentHolder)
+                .<GuiGameElement.GuiRenderBuilder>at(
+                        guideX + ENCHANTING_GUIDE.width,
+                        guideY + ENCHANTING_GUIDE.height - 48,
+                        -200
+                )
+                .scale(3)
+                .render(pGuiGraphics);
+    }
 
-		extraAreas = ImmutableList.of(
-				new Rect2i(guideX + TEXTURE_WIDTH, guideY + TEXTURE_HEIGHT - 48, 48, 48),
-				new Rect2i(guideX, guideY, imageWidth, imageHeight)
-		);
+    @Override
+    public void removed() {
+        super.removed();
+        if(directItemStackEdit)
+            CeiPackets.channel.sendToServer(new EnchantingGuideEditPacket(index, menu.getSlot(36).getItem()));
+        else
+            CeiPackets.channel.sendToServer(new BlazeEnchanterEditPacket(index, menu.getSlot(36).getItem(), blockPos));
+    }
 
-		// Read index directly from the menu's content holder tag
-		CompoundTag tag = menu.contentHolder.getTag();
-		index = (tag != null) ? tag.getInt("index") : 0;
+    @Override
+    public List<Rect2i> getExtraAreas() {
+        return extraAreas;
+    }
 
-		scrollInput = new SelectionScrollInput(guideX + 40, guideY + 22, 120, 16);
-		scrollInputLabel = new Label(guideX + 43, guideY + 26, Component.literal("")).withShadow();
-
-		// Update local index when scrolling
-		scrollInput.calling(i -> this.index = i)
-				.writingTo(scrollInputLabel);
-
-		addRenderableWidget(scrollInputLabel);
-		addRenderableWidget(scrollInput);
-
-		updateScrollInput(false);
-	}
-
-	@Override
-	protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-		int invX = getLeftOfCentered(PLAYER_INVENTORY.getWidth());
-		int invY = topPos + TEXTURE_HEIGHT + 4;
-		renderPlayerInventory(graphics, invX, invY);
-
-		int guideX = getLeftOfCentered(ENCHANTING_GUIDE_WIDTH);
-		int guideY = topPos;
-
-		CeiGuiTextures.render(graphics, guideX, guideY);
-
-		Component titleText = Component.translatable("item.create_enchantment_industry.enchanting_guide");
-		graphics.drawCenteredString(font, titleText, guideX + ENCHANTING_GUIDE_WIDTH / 2, guideY + 3, 0xFFFFFF);
-	}
-
-	@Override
-	public void removed() {
-		super.removed();
-		// Grab the item currently in the ghost slot (Slot 36)
-		ItemStack resultStack = menu.getSlot(36).getItem();
-
-		if (directItemStackEdit) {
-			CeiPackets.channel.sendToServer(new EnchantingGuideEditPacket(index, resultStack));
-		} else {
-			// If editing a BlockEntity, we must have a valid blockPos
-			if (blockPos != null) {
-				CeiPackets.channel.sendToServer(new BlazeEnchanterEditPacket(index, resultStack, blockPos));
-			}
-		}
-	}
-
-	@Override
-	public List<Rect2i> getExtraAreas() {
-		return extraAreas;
-	}
 }
