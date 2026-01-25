@@ -22,6 +22,7 @@ import io.github.fabricators_of_create.porting_lib.util.NBTSerializer;
 
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.base.SidedStorageBlockEntity;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
@@ -152,7 +153,10 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			return;
 		}
 
-		heldItem.beltPosition += 0.125f;
+		// MOVEMENT LOGIC
+		// Use smaller increment for smoother animation (was 0.125f, now 0.05f)
+		heldItem.beltPosition += 0.05f;
+
 		if (heldItem.beltPosition >= 0.5f) {
 			var entry = Enchanting.getValidEnchantment(heldItem.stack, targetItem, hyper());
 			if (entry != null) {
@@ -162,50 +166,62 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 			}
 		}
 
-		// Eject item if it reaches end of path
+		// EJECTION LOGIC
 		if (heldItem.beltPosition >= 1.0f) {
-			Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1, worldPosition.getZ() + 0.5, heldItem.stack);
-			heldItem = null;
-			setChanged();
-			notifyUpdate();
+			Direction outputSide = heldItem.insertedFrom != null ? heldItem.insertedFrom.getOpposite() : Direction.UP;
+
+			Storage<ItemVariant> target = ItemStorage.SIDED.find(level, worldPosition.relative(outputSide), outputSide.getOpposite());
+
+			boolean successfulTransfer = false;
+			if (target != null) {
+				try (Transaction t = Transaction.openOuter()) {
+					long inserted = target.insert(ItemVariant.of(heldItem.stack), heldItem.stack.getCount(), t);
+					if (inserted == heldItem.stack.getCount()) {
+						t.commit();
+						successfulTransfer = true;
+					}
+				}
+			}
+
+			if (successfulTransfer) {
+				heldItem = null;
+				setChanged();
+				notifyUpdate();
+			} else if (target != null) {
+				// Target full, wait
+				heldItem.beltPosition = 1.0f;
+			} else {
+				// Drop logic
+				BlockPos dropPos = worldPosition.relative(outputSide);
+				Containers.dropItemStack(level, dropPos.getX() + 0.5, dropPos.getY() + 0.5, dropPos.getZ() + 0.5, heldItem.stack);
+				heldItem = null;
+				setChanged();
+				notifyUpdate();
+			}
 		}
 	}
 
 	private void tickAnimation() {
-		// Store old values for smooth interpolation
 		oHeadAngle = headAngle;
 		oFlip = flip;
 
-		// 1. Look At Player Logic
 		Player player = level.getNearestPlayer(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, 10, false);
 
 		if (player != null) {
 			double dx = player.getX() - (worldPosition.getX() + 0.5);
 			double dz = player.getZ() - (worldPosition.getZ() + 0.5);
-
-			// Calculate angle in RADIANS
 			double radians = Mth.atan2(dz, dx);
-
-			// Convert to DEGREES
-			// NEGATIVE converts the direction so Left goes Left (matches your previous success)
 			float targetAngle = - (float) (radians * (180.0 / Math.PI));
-
-			// Offset: -90 degrees flips it 180 compared to the previous +90
-			// This should make it face YOU instead of away.
 			targetAngle -= 90f;
 
-			// Handle wrapping (degrees) so it doesn't spin 360 wildly
 			float angleDiff = targetAngle - headAngle;
 			while (angleDiff < -180f) angleDiff += 360f;
 			while (angleDiff >= 180f) angleDiff -= 360f;
 
-			// Smoothly rotate towards target
 			headAngle += angleDiff * 0.1f;
 		}
 
-		// 2. Book Opening Logic
 		boolean bookOpen = !targetItem.isEmpty() || (heldItem != null);
-
 		if (bookOpen) {
 			flip += 0.1f;
 		} else {
@@ -244,16 +260,17 @@ public class BlazeEnchanterBlockEntity extends SmartBlockEntity
 	protected ItemStack tryInsertingFromSide(TransportedItemStack stack, Direction side, boolean simulate) {
 		if (heldItem != null) return stack.stack;
 
-		// Reject insertion if we don't have ANY experience in the tank
-		if (!hasAnyExperience()) return stack.stack;
-
 		ItemStack inserted = stack.stack.copy();
 		inserted.setCount(1);
 		if (!simulate) {
 			heldItem = stack.copy();
 			heldItem.stack = inserted;
+			// FIX: Reset belt position to 0 so it animates from start
+			heldItem.beltPosition = 0.0f;
+			heldItem.prevBeltPosition = 0.0f;
 			heldItem.insertedFrom = side;
 			setChanged();
+			notifyUpdate();
 		}
 		return ItemHandlerHelper.copyStackWithSize(stack.stack, stack.stack.getCount() - 1);
 	}
