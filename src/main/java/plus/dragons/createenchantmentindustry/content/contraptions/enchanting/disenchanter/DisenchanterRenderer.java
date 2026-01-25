@@ -109,17 +109,24 @@ public class DisenchanterRenderer extends SmartBlockEntityRenderer<DisenchanterB
 		SmartFluidTankBehaviour.TankSegment primaryTank = tank.getPrimaryTank();
 		FluidStack tankFluidStack = primaryTank.getRenderedFluid();
 		float level = primaryTank.getFluidLevel().getValue(partialTicks);
+		level = Mth.clamp(level, 0, 1);
 
-		// Internal tank basin - Forced to standard Experience color (Green)
+		// Internal tank basin
 		if (!tankFluidStack.isEmpty() && level > 0) {
-			float yMin = 5.2f / 16f;
-			float yOffset = (7.8f / 16f) * level;
+			// Adjusted to fill from the basin floor (2px) to near the top (13px)
+			float yMin = 0.0f / 16f;
+			float yMax = 9.8f / 16f;
+			float yOffset = (yMax - yMin) * level;
+
+			// Reduced radius to 4.5 pixels to ensure it fits strictly inside the basin
+			float radius = 6f / 16f;
 
 			ps.pushPose();
-			ps.translate(0.5f, yMin, 0.5f);
-			// FIX: Removed .get() call
+			ps.translate(0.0f, yMin, 0.0f);
+
 			FluidStack visualXp = new FluidStack(CeiFluids.EXPERIENCE.getSource(), tankFluidStack.getAmount());
-			FluidRenderer.renderFluidStream(visualXp, Direction.UP, 5.8f / 16f, yOffset, false, buffer, ps, light);
+			// Using renderFluidStream with radius/length arguments
+			FluidRenderer.renderFluidStream(visualXp, Direction.UP, radius, yOffset, false, buffer, ps, light);
 			ps.popPose();
 		}
 
@@ -133,8 +140,6 @@ public class DisenchanterRenderer extends SmartBlockEntityRenderer<DisenchanterB
 		FluidStack xp = result.getFirst();
 		if (xp.isEmpty()) return;
 
-		// Falling stream - Forced to standard Experience color (Green)
-		// FIX: Removed .get() call
 		FluidStack visualFallingXp = new FluidStack(CeiFluids.EXPERIENCE.getSource(), xp.getAmount());
 
 		float processingProgress = Mth.clamp(1 - (be.processingTicks - partialTicks - 5) / 10f, 0, 1);

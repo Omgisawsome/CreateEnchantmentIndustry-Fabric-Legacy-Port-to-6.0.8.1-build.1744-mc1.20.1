@@ -80,13 +80,14 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 		behaviours.add(new DirectBeltInputBehaviour(this).allowingBeltFunnels()
 				.setInsertionHandler(this::tryInsertingFromSide));
 
+		// FIX: Calculate capacity using correct UNIT_PER_MB multiplier (81000 droplets = 1 bucket)
+		// This ensures the tank size aligns with XP values
 		internalTank = SmartFluidTankBehaviour.single(this, (long) CeiConfigs.SERVER.disenchanterTankCapacity.get() * UNIT_PER_MB)
 				.allowExtraction()
 				.forbidInsertion();
 
 		behaviours.add(internalTank);
 
-		// FIX: Removed .get() call as CeiFluids.EXPERIENCE is accessed directly
 		internalTank.getPrimaryHandler().setValidator(fluidStack ->
 				fluidStack.getFluid().isSame(CeiFluids.EXPERIENCE.getSource()));
 
@@ -194,7 +195,7 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 			});
 
 			if (sum.get() != 0) {
-				// FIX: Removed .get() call
+				// FIX: Use UNIT_PER_MB to guarantee exact conversion
 				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE.getSource(), (long) sum.get() * UNIT_PER_MB);
 				try(Transaction t = TransferUtil.getTransaction()){
 					internalTank.allowInsertion();
@@ -225,17 +226,19 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 			internalTank.allowInsertion();
 			for (var orb : experienceOrbs) {
 				var amount = orb.value;
-				// FIX: Removed .get() call
 				var fluidStack = new FluidStack(CeiFluids.EXPERIENCE.getSource(), (long) amount * UNIT_PER_MB);
 				try(Transaction t = TransferUtil.getTransaction()) {
 					long inserted = internalTank.getPrimaryHandler().insert(FluidVariant.of(fluidStack.getFluid()), fluidStack.getAmount(), t);
 					t.commit();
+
+					// FIX: Partial insertion logic to prevent orb loss
 					if (inserted >= fluidStack.getAmount()) {
 						absorbedXp = true;
 						orb.discard();
 					} else if (inserted > 0) {
 						absorbedXp = true;
 						orb.value -= (int) (inserted / UNIT_PER_MB);
+						if (orb.value <= 0) orb.discard();
 						break;
 					}
 				}
@@ -262,18 +265,20 @@ public class DisenchanterBlockEntity extends SmartBlockEntity implements IHaveGo
 		Pair<FluidStack, ItemStack> result = Disenchanting.disenchantResult(heldItem.stack, level);
 		if (result == null) return false;
 
-		// FORCE: Convert result to Standard Experience Fluid and FIX: removed .get()
 		FluidStack resultFluid = result.getFirst();
 		FluidStack xpToStore = new FluidStack(CeiFluids.EXPERIENCE.getSource(), resultFluid.getAmount() * heldItem.stack.getCount());
 
 		if (processingTicks > 5) {
 			try(Transaction t = TransferUtil.getTransaction()) {
 				internalTank.allowInsertion();
-				if (internalTank.getPrimaryHandler().insert(FluidVariant.of(xpToStore.getFluid()), xpToStore.getAmount(), t) != xpToStore.getAmount()) {
+				long inserted = internalTank.getPrimaryHandler().insert(FluidVariant.of(xpToStore.getFluid()), xpToStore.getAmount(), t);
+				if (inserted != xpToStore.getAmount()) {
+					t.abort();
 					internalTank.forbidInsertion();
 					processingTicks = DISENCHANTER_TIME;
 					return true;
 				}
+				t.abort();
 				internalTank.forbidInsertion();
 			}
 			return true;
