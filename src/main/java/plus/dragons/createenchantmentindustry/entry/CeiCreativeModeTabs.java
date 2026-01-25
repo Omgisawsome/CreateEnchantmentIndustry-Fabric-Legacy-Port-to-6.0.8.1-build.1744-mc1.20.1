@@ -5,6 +5,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import plus.dragons.createenchantmentindustry.EnchantmentIndustry;
@@ -15,11 +16,13 @@ public class CeiCreativeModeTabs {
 			.title(Component.translatable("itemGroup.create_enchantment_industry.main"))
 			.icon(() -> new ItemStack(CeiBlocks.DISENCHANTER.get()))
 			.displayItems((parameters, output) -> {
-				// Iterate through all items registered by this mod
+				// Get the ID of the item we want to hide
+				ResourceLocation blazeEnchanterId = new ResourceLocation(EnchantmentIndustry.ID, "blaze_enchanter");
+
 				EnchantmentIndustry.REGISTRATE.getAll(Registries.ITEM).stream()
 						.map(entry -> entry.get())
-						// FILTER: Exclude the Blaze Enchanter item so it stays hidden
-						.filter(item -> item != CeiBlocks.BLAZE_ENCHANTER.get().asItem())
+						// ROBUST FILTER: Check the actual ID of the item
+						.filter(item -> !BuiltInRegistries.ITEM.getKey(item).equals(blazeEnchanterId))
 						.forEach(output::accept);
 			})
 			.build();

@@ -1,7 +1,9 @@
 {
 
 	"_": "->------------------------]  Game Elements  [------------------------<-",
+  "itemGroup.create_enchantment_industry.main": "Create Enchantment Industry",
 
+  "_": "->------------------------]  Game Elements  [------------------------<-",
 	"block.create_enchantment_industry.blaze_enchanter": "Blaze Enchanter",
 	"block.create_enchantment_industry.disenchanter": "Disenchanter",
 	"block.create_enchantment_industry.ink": "Ink",
