@@ -3,7 +3,7 @@
 //file:noinspection GradlePackageVersionRange
 
 plugins {
-    id "fabric-loom" version "1.10.+"
+	id "fabric-loom" version "1.10-SNAPSHOT"
 	id "maven-publish"
 	id "me.modmuss50.mod-publish-plugin" version "0.3.5"
 }
@@ -16,21 +16,24 @@ group = project.maven_group
 version = mod_version
 
 repositories {
-	maven { url = "https://maven.shedaniel.me/" } // Cloth Config, REI
-	maven { url = "https://maven.blamejared.com/" } // JEI
-	maven { url = "https://maven.parchmentmc.org" } // Parchment mappings
-	maven { url = "https://maven.quiltmc.org/repository/release" } // Quilt Mappings
-	maven { url = "https://api.modrinth.com/maven" } // LazyDFU
-	maven { url = "https://maven.terraformersmc.com/releases/" } // Mod Menu
-	maven { url = "https://mvn.devos.one/snapshots/" } // Create, Porting Lib, Forge Tags, Milk Lib, Registrate
-	maven { url = "https://mvn.devos.one/releases/" } // Porting Lib Releases
-	maven { url = "https://maven.createmod.net" } // Create, Porting Lib, Forge Tags, Milk Lib, Registrate
-	maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" } // Forge Config API Port
-	maven { url = "https://maven.jamieswhiteshirt.com/libs-release" } // Reach Entity Attributes
-	maven { url = "https://jitpack.io/" } // Mixin Extras, Fabric ASM
-	maven { url = "https://maven.dragons.plus/releases" } // DragonLib
-	maven { url = "https://maven.dragons.plus/snapshots" } // DragonLib snapshot
-	mavenLocal() // Fast test
+	maven { url = "https://maven.shedaniel.me/" }
+	maven { url = "https://maven.blamejared.com/" }
+	maven { url = "https://maven.parchmentmc.org" }
+	maven { url = "https://maven.quiltmc.org/repository/release" }
+	maven { url = "https://api.modrinth.com/maven" }
+	maven { url = "https://maven.terraformersmc.com/releases/" }
+	maven { url = "https://mvn.devos.one/snapshots/" }
+	maven { url = "https://mvn.devos.one/releases/" }
+	maven { url = "https://maven.createmod.net" }
+	maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/" }
+	maven { url = "https://maven.jamieswhiteshirt.com/libs-release" }
+	maven { url = "https://jitpack.io/" }
+
+	flatDir {
+		dirs 'libs'
+	}
+
+	mavenLocal()
 }
 
 loom {
@@ -47,14 +50,12 @@ loom {
 	runs {
 		datagen {
 			client()
-
 			name "Data Generation"
 			vmArg "-Dfabric-api.datagen"
 			vmArg "-Dfabric-api.datagen.output-dir=${file("src/generated/resources")}"
 			vmArg "-Dfabric-api.datagen.modid=create_enchantment_industry"
 			vmArg "-Dporting_lib.datagen.existing_resources=${file("src/main/resources")}"
 		}
-
 		server {
 			runDir "run/server"
 		}
@@ -62,33 +63,23 @@ loom {
 }
 
 dependencies {
-	// Setup
 	minecraft("com.mojang:minecraft:${minecraft_version}")
 	mappings(loom.layered {
-		//it.mappings("org.quiltmc:quilt-mappings:${minecraft_version}+build.${qm_version}:intermediary-v2")
 		it.officialMojangMappings { nameSyntheticMembers = false }
 		it.parchment("org.parchmentmc.data:parchment-${minecraft_version}:${parchment_version}@zip")
 	})
 	modImplementation("net.fabricmc:fabric-loader:${fabric_loader_version}")
-
-	// dependencies
 	modImplementation("net.fabricmc.fabric-api:fabric-api:${fabric_api_version}")
-
-
-	// Create
 	modImplementation("com.simibubi.create:create-fabric:${create_version}")
 
-	// Create Dragon Lib
-	include(modImplementation("plus.dragons.createdragonlib:create_dragon_lib-fabric-${minecraft_version}:${dragonlib_version}"){
-		transitive = false
-	})
+	// --- UPDATED LOCAL DRAGON LIB INTEGRATION ---
+	// Instead of files(), use coordinates. Loom will find this in your 'libs' folder.
+	// Ensure the filename is: create_dragon_lib-fabric-1.20.1-1.4.3.jar
+	include(modImplementation(name: 'create_dragon_lib-fabric-1.20.1-1.4.3'))
 
-	// Development QOL
 	modLocalRuntime("maven.modrinth:lazydfu:${lazydfu_version}")
 	modLocalRuntime("com.terraformersmc:modmenu:${modmenu_version}")
 
-	// Recipe Viewers - Create Fabric supports JEI, REI, and EMI.
-	// See root gradle.properties to choose which to use at runtime.
 	switch (recipe_viewer.toLowerCase(Locale.ROOT)) {
 		case "jei": modLocalRuntime("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}"); break
 		case "rei": modLocalRuntime("me.shedaniel:RoughlyEnoughItems-fabric:${rei_version}"); break
@@ -96,32 +87,27 @@ dependencies {
 		case "disabled": break
 		default: println("Unknown recipe viewer specified: ${recipe_viewer}. Must be JEI, REI, EMI, or disabled.")
 	}
-	// if you would like to add integration with them, uncomment them here.
-    modCompileOnly("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}")
-    modCompileOnly("mezz.jei:jei-${minecraft_version}-common:${jei_version}")
-//    modCompileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:${rei_version}")
-//    modCompileOnly("me.shedaniel:RoughlyEnoughItems-default-plugin-fabric:${rei_version}")
-//    modCompileOnly("dev.emi:emi:${emi_version}")
+
+	modCompileOnly("mezz.jei:jei-${minecraft_version}-fabric:${jei_version}")
+	modCompileOnly("mezz.jei:jei-${minecraft_version}-common:${jei_version}")
 }
 
 processResources {
-	// require dependencies to be the version compiled against or newer
-	Map<String, String> properties = new HashMap<>()
-	properties.put("version", version)
-	properties.put("fabric_loader_version", fabric_loader_version)
-	properties.put("fabric_api_version", fabric_api_version)
-	properties.put("create_version", create_version)
-	properties.put("minecraft_version", minecraft_version)
-
+	Map<String, String> properties = [
+			"version": version,
+			"fabric_loader_version": fabric_loader_version,
+			"fabric_api_version": fabric_api_version,
+			"create_version": create_version,
+			"minecraft_version": minecraft_version
+	]
 	properties.forEach((k, v) -> inputs.property(k, v))
-
 	filesMatching("fabric.mod.json") {
 		expand properties
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = Integer.parseInt(sourceCompatibility)
+	it.options.release.set(17)
 }
 
 java {
@@ -136,7 +122,7 @@ jar {
 
 publishMods {
 	file = remapJar.archiveFile
-	changelog = new File("changelog/${mod_version}.md").text
+	changelog = new File("changelog/${mod_version}.md").exists() ? new File("changelog/${mod_version}.md").text : "Initial Release"
 	version = mod_version
 	type = STABLE
 	displayName = "CEI ${mod_version} for Create ${minecraft_version}-${create_version}"
@@ -147,7 +133,6 @@ publishMods {
 		projectId = "876129"
 		accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
 		minecraftVersions.add(minecraft_version)
-
 		requires {
 			slug = "create-fabric"
 			slug = "fabric-api"
@@ -158,7 +143,6 @@ publishMods {
 		projectId = "AEZO385x"
 		accessToken = providers.environmentVariable("MODRINTH_TOKEN")
 		minecraftVersions.add(minecraft_version)
-
 		requires {
 			slug = "create-fabric"
 			slug = "fabric-api"
@@ -171,13 +155,5 @@ publishing {
 		mavenJava(MavenPublication) {
 			from components.java
 		}
-	}
-
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
 	}
 }
