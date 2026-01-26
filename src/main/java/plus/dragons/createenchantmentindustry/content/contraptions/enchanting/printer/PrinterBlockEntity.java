@@ -69,19 +69,12 @@ public class PrinterBlockEntity extends SmartBlockEntity implements SidedStorage
 
 	@Override
 	public void addBehaviours(List<BlockEntityBehaviour> behaviours) {
-		// FIXED: Added the filter argument (argument 1)
-		// This ensures it calls FilteringFluidTankBehaviour.single(...) instead of SmartFluidTankBehaviour.single(...)
-		tank = FilteringFluidTankBehaviour
-				.single(
-						// Filter: Allow fluids that are valid Printer inputs (Ink, XP, etc.)
-						fluid -> CeiTags.FluidTag.PRINTER_INPUT.matches(fluid.getFluid()),
-						this,
-						(int) (CeiConfigs.SERVER.printerTankCapacity.get() * EnchantmentIndustry.UNIT_PER_MB) // Cast to int
-				);
-
-		tank.allowExtraction();
-		tank.allowInsertion();
-
+		// Initializing the tank with the filter
+		tank = FilteringFluidTankBehaviour.single(
+				fluid -> CeiTags.FluidTag.PRINTER_INPUT.matches(fluid.getFluid()),
+				this,
+				(int) (CeiConfigs.SERVER.printerTankCapacity.get() * EnchantmentIndustry.UNIT_PER_MB)
+		);
 		behaviours.add(tank);
 
 		behaviours.add(beltProcessing = new BeltProcessingBehaviour(this)
@@ -95,6 +88,10 @@ public class PrinterBlockEntity extends SmartBlockEntity implements SidedStorage
 		ItemStack copyTarget = getCopyTarget();
 		if (tooExpensive || copyTarget.isEmpty()) return PASS;
 		if (!Printing.isValid(transported.stack)) return PASS;
+
+		// Check if there is a valid match between the template and the item
+		if (Printing.match(copyTarget, transported.stack) == null) return PASS;
+
 		if (tank.getPrimaryHandler().getResource().isBlank()) return HOLD;
 		if (Printing.isTooExpensive(copyTarget, CeiConfigs.SERVER.printerTankCapacity.get())) return PASS;
 
@@ -180,8 +177,15 @@ public class PrinterBlockEntity extends SmartBlockEntity implements SidedStorage
 		Vec3 center = Vec3.atCenterOf(worldPosition);
 	}
 
+	// --- ITEM STORAGE ---
 	@Override
 	public @Nullable Storage<ItemVariant> getItemStorage(Direction side) {
 		return copyTargetStorage;
+	}
+
+	// --- CRITICAL FIX: FLUID STORAGE EXPOSURE ---
+	@Override
+	public @Nullable Storage<FluidVariant> getFluidStorage(Direction side) {
+		return tank.getCapability();
 	}
 }

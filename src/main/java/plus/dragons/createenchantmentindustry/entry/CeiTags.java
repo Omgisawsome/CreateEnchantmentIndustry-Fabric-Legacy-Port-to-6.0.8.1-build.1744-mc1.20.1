@@ -54,33 +54,15 @@ public class CeiTags {
 
 	public enum BlockTag {
 		;
-
 		public final TagKey<Block> tag;
 		public final boolean alwaysDatagen;
 
-		BlockTag() {
-			this(NameSpace.MOD);
-		}
-
-		BlockTag(NameSpace namespace) {
-			this(namespace, namespace.optionalDefault, namespace.alwaysDatagenDefault);
-		}
-
-		BlockTag(boolean alwaysDatagen) {
-			this(NameSpace.MOD, NameSpace.MOD.optionalDefault, alwaysDatagen);
-		}
-
-		BlockTag(NameSpace namespace, boolean alwaysDatagen) {
-			this(namespace, namespace.optionalDefault, alwaysDatagen);
-		}
-
-		BlockTag(NameSpace namespace, String path) {
-			this(namespace, path, namespace.optionalDefault, namespace.alwaysDatagenDefault);
-		}
-
-		BlockTag(NameSpace namespace, boolean optional, boolean alwaysDatagen) {
-			this(namespace, null, optional, alwaysDatagen);
-		}
+		BlockTag() { this(NameSpace.MOD); }
+		BlockTag(NameSpace namespace) { this(namespace, namespace.optionalDefault, namespace.alwaysDatagenDefault); }
+		BlockTag(boolean alwaysDatagen) { this(NameSpace.MOD, NameSpace.MOD.optionalDefault, alwaysDatagen); }
+		BlockTag(NameSpace namespace, boolean alwaysDatagen) { this(namespace, namespace.optionalDefault, alwaysDatagen); }
+		BlockTag(NameSpace namespace, String path) { this(namespace, path, namespace.optionalDefault, namespace.alwaysDatagenDefault); }
+		BlockTag(NameSpace namespace, boolean optional, boolean alwaysDatagen) { this(namespace, null, optional, alwaysDatagen); }
 
 		BlockTag(NameSpace namespace, String path, boolean optional, boolean alwaysDatagen) {
 			ResourceLocation id = new ResourceLocation(namespace.id, path == null ? toTagName(name()) : path);
@@ -89,48 +71,25 @@ public class CeiTags {
 		}
 
 		@SuppressWarnings("deprecation")
-		public boolean matches(Block block) {
-			return block.builtInRegistryHolder().is(tag);
-		}
-
-		public boolean matches(BlockState state) {
-			return state.is(tag);
-		}
-
+		public boolean matches(Block block) { return block.builtInRegistryHolder().is(tag); }
+		public boolean matches(BlockState state) { return state.is(tag); }
 		private static void init() {}
 	}
 
 	public enum ItemTag {
 		INK_INGREDIENT(true),
-		PRINTER_INPUT(true), // FIXED: Added missing tag definition here
+		PRINTER_INPUT(true),
 		UPRIGHT_ON_BELT(NameSpace.CREATE, true);
 
 		public final TagKey<Item> tag;
 		public final boolean alwaysDatagen;
 
-		ItemTag() {
-			this(NameSpace.MOD);
-		}
-
-		ItemTag(NameSpace namespace) {
-			this(namespace, namespace.optionalDefault, namespace.alwaysDatagenDefault);
-		}
-
-		ItemTag(boolean alwaysDatagen) {
-			this(NameSpace.MOD, NameSpace.MOD.optionalDefault, alwaysDatagen);
-		}
-
-		ItemTag(NameSpace namespace, boolean alwaysDatagen) {
-			this(namespace, namespace.optionalDefault, alwaysDatagen);
-		}
-
-		ItemTag(NameSpace namespace, String path) {
-			this(namespace, path, namespace.optionalDefault, namespace.alwaysDatagenDefault);
-		}
-
-		ItemTag(NameSpace namespace, boolean optional, boolean alwaysDatagen) {
-			this(namespace, null, optional, alwaysDatagen);
-		}
+		ItemTag() { this(NameSpace.MOD); }
+		ItemTag(NameSpace namespace) { this(namespace, namespace.optionalDefault, namespace.alwaysDatagenDefault); }
+		ItemTag(boolean alwaysDatagen) { this(NameSpace.MOD, NameSpace.MOD.optionalDefault, alwaysDatagen); }
+		ItemTag(NameSpace namespace, boolean alwaysDatagen) { this(namespace, namespace.optionalDefault, alwaysDatagen); }
+		ItemTag(NameSpace namespace, String path) { this(namespace, path, namespace.optionalDefault, namespace.alwaysDatagenDefault); }
+		ItemTag(NameSpace namespace, boolean optional, boolean alwaysDatagen) { this(namespace, null, optional, alwaysDatagen); }
 
 		ItemTag(NameSpace namespace, String path, boolean optional, boolean alwaysDatagen) {
 			ResourceLocation id = new ResourceLocation(namespace.id, path == null ? toTagName(name()) : path);
@@ -139,14 +98,8 @@ public class CeiTags {
 		}
 
 		@SuppressWarnings("deprecation")
-		public boolean matches(Item item) {
-			return item.builtInRegistryHolder().is(tag);
-		}
-
-		public boolean matches(ItemStack stack) {
-			return stack.is(tag);
-		}
-
+		public boolean matches(Item item) { return item.builtInRegistryHolder().is(tag); }
+		public boolean matches(ItemStack stack) { return stack.is(tag); }
 		private static void init() {}
 	}
 
@@ -158,25 +111,11 @@ public class CeiTags {
 		public final TagKey<Fluid> tag;
 		public final boolean alwaysDatagen;
 
-		FluidTag() {
-			this(NameSpace.MOD);
-		}
-
-		FluidTag(boolean alwaysDatagen) {
-			this(NameSpace.MOD, NameSpace.MOD.optionalDefault, alwaysDatagen);
-		}
-
-		FluidTag(NameSpace namespace) {
-			this(namespace, namespace.optionalDefault, namespace.alwaysDatagenDefault);
-		}
-
-		FluidTag(NameSpace namespace, String path) {
-			this(namespace, path, namespace.optionalDefault, namespace.alwaysDatagenDefault);
-		}
-
-		FluidTag(NameSpace namespace, boolean optional, boolean alwaysDatagen) {
-			this(namespace, null, optional, alwaysDatagen);
-		}
+		FluidTag() { this(NameSpace.MOD); }
+		FluidTag(boolean alwaysDatagen) { this(NameSpace.MOD, NameSpace.MOD.optionalDefault, alwaysDatagen); }
+		FluidTag(NameSpace namespace) { this(namespace, namespace.optionalDefault, namespace.alwaysDatagenDefault); }
+		FluidTag(NameSpace namespace, String path) { this(namespace, path, namespace.optionalDefault, namespace.alwaysDatagenDefault); }
+		FluidTag(NameSpace namespace, boolean optional, boolean alwaysDatagen) { this(namespace, null, optional, alwaysDatagen); }
 
 		FluidTag(NameSpace namespace, String path, boolean optional, boolean alwaysDatagen) {
 			ResourceLocation id = new ResourceLocation(namespace.id, path == null ? toTagName(name()) : path);
@@ -185,14 +124,8 @@ public class CeiTags {
 		}
 
 		@SuppressWarnings("deprecation")
-		public boolean matches(Fluid fluid) {
-			return fluid.is(tag);
-		}
-
-		public boolean matches(FluidState state) {
-			return state.is(tag);
-		}
-
+		public boolean matches(Fluid fluid) { return fluid.is(tag); }
+		public boolean matches(FluidState state) { return state.is(tag); }
 		private static void init() {}
 	}
 
@@ -204,14 +137,18 @@ public class CeiTags {
 
 	public static void genFluidTag(RegistrateTagsProvider<Fluid> pov) {
 		TagGen.CreateTagsProvider<Fluid> prov = new TagGen.CreateTagsProvider<>(pov, Fluid::builtInRegistryHolder);
-		prov.tag(FluidTag.PRINTER_INPUT.tag).addTag(FluidTag.INK.tag);
+
+		// FIXED: Use BuiltInRegistries to get the ResourceKey for the tag appender
+		prov.tag(FluidTag.PRINTER_INPUT.tag)
+				.addTag(FluidTag.INK.tag)
+				.add(BuiltInRegistries.FLUID.getResourceKey(CeiFluids.EXPERIENCE).orElseThrow())
+				.add(BuiltInRegistries.FLUID.getResourceKey(CeiFluids.HYPER_EXPERIENCE).orElseThrow());
 	}
 
 	public static void genItemTag(RegistrateTagsProvider<Item> pov) {
 		TagGen.CreateTagsProvider<Item> prov = new TagGen.CreateTagsProvider<>(pov, Item::builtInRegistryHolder);
 		prov.tag(ItemTag.INK_INGREDIENT.tag).add(Items.BLACK_DYE, Items.WITHER_ROSE, Items.INK_SAC);
 		prov.tag(ItemTag.UPRIGHT_ON_BELT.tag).add(Items.EXPERIENCE_BOTTLE);
-		// Optional: Add vanilla printable items to the tag so other mods can see them
 		prov.tag(ItemTag.PRINTER_INPUT.tag).add(Items.BOOK, Items.WRITTEN_BOOK, Items.ENCHANTED_BOOK, Items.NAME_TAG);
 	}
 }

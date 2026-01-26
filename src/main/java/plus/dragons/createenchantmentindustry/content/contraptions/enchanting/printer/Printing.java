@@ -14,13 +14,32 @@ public class Printing {
 
 	public static boolean isValid(ItemStack stack) {
 		if (stack.isEmpty()) return false;
-		if (stack.is(Items.BOOK)) return true;
-		if (stack.is(Items.NAME_TAG) && stack.hasCustomHoverName()) return true;
-		if (stack.is(Items.WRITTEN_BOOK)) return true;
-		if (stack.is(Items.ENCHANTED_BOOK)) return true;
+		if (CeiTags.ItemTag.PRINTER_INPUT.tag != null && stack.is(CeiTags.ItemTag.PRINTER_INPUT.tag)) return true;
+		return stack.is(Items.BOOK) || stack.is(Items.NAME_TAG) || stack.is(Items.WRITTEN_BOOK) || stack.is(Items.ENCHANTED_BOOK);
+	}
 
-		// FIXED: Use the matches() method from CeiTags enum
-		return CeiTags.ItemTag.PRINTER_INPUT.matches(stack);
+	/**
+	 * Checks if the provided item is a valid "Copy Target" (Template) to be placed ON the printer.
+	 */
+	public static ItemStack match(ItemStack stack) {
+		if (stack.isEmpty()) return null;
+		if (stack.is(Items.WRITTEN_BOOK)) return stack;
+		if (stack.is(Items.ENCHANTED_BOOK)) return stack;
+		if (stack.is(Items.NAME_TAG) && stack.hasCustomHoverName()) return stack;
+		return null;
+	}
+
+	/**
+	 * Checks if the item on the belt is compatible with the Copy Target.
+	 */
+	public static ItemStack match(ItemStack copyTarget, ItemStack beltItem) {
+		if (match(copyTarget) == null) return null;
+
+		if (copyTarget.is(Items.WRITTEN_BOOK)) return beltItem.is(Items.BOOK) ? copyTarget : null;
+		if (copyTarget.is(Items.ENCHANTED_BOOK)) return beltItem.is(Items.BOOK) ? copyTarget : null;
+		if (copyTarget.is(Items.NAME_TAG)) return beltItem.is(Items.NAME_TAG) ? copyTarget : null;
+
+		return null;
 	}
 
 	public static boolean isTooExpensive(ItemStack target, int limit) {
@@ -68,9 +87,5 @@ public class Printing {
 			}
 		}
 		return null;
-	}
-
-	public static ItemStack match(ItemStack stack) {
-		return isValid(stack) ? stack : null;
 	}
 }
