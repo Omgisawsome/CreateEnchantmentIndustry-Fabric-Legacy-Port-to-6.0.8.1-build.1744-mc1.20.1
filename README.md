@@ -1,5 +1,8 @@
 ## Welcome to **Create Enchantment Industry Fabric**
-A mod offering more tools and methods to handle experience & enchantment in Create.
+A mod offering more tools and methods to handle experience & enchantment in Create
+
+NOTE I ABANDONED THE PORT BECAUSE SOMEONE DID IT BETTER THAN ME.
+As of now there's still a couple bugs if you find this and wanna use it go ahead.
 
 ![Fabric Logo](https://wsrv.nl/?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fnpm%2F%40intergrav%2Fdevins-badges%403%2Fassets%2Fcozy%2Fsupported%2Ffabric_64h.png&n=-1 "Fabric Logo") ![Quilt Logo](https://wsrv.nl/?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fnpm%2F%40intergrav%2Fdevins-badges%403%2Fassets%2Fcozy%2Fsupported%2Fquilt_64h.png&n=-1 "Quilt Logo")
 
