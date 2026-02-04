@@ -2,9 +2,9 @@
 	"credit": "By LimonBlaze, made with Blockbench",
 	"parent": "block/block",
 	"textures": {
-		"tank": "create:block/spout",
-		"particle": "create:block/copper_plating"
-	},
+    "tank": "create_enchantment_industry:block/printer_fix/spout",
+    "particle": "create_enchantment_industry:block/printer_fix/copper_plating"
+  },
 	"elements": [
 		{
 			"from": [5, -4, 5],

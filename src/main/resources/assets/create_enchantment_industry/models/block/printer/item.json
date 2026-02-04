@@ -3,11 +3,11 @@
 	"parent": "block/block",
 	"render_type": "cutout_mipped",
 	"textures": {
-		"tank": "create:block/spout",
-		"head": "create:block/mechanical_press_head",
-		"particle": "create:block/copper_plating",
-		"hose": "create:block/hose_pulley_magnet"
-	},
+    "tank": "create_enchantment_industry:block/printer_fix/spout",
+    "head": "create_enchantment_industry:block/printer_fix/mechanical_press_head",
+    "particle": "create_enchantment_industry:block/printer_fix/copper_plating",
+    "hose": "create_enchantment_industry:block/printer_fix/hose_pulley_magnet"
+  },
 	"elements": [
 		{
 			"name": "Top 1",

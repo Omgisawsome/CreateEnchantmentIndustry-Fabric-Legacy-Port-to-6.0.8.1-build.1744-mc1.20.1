@@ -1,11 +1,11 @@
 {
 	"credit": "By LimonBlaze, made with Blockbench",
 	"parent": "block/block",
-	"textures": {
-		"head": "create:block/mechanical_press_head",
-		"particle": "create:block/copper_plating",
-		"hose": "create:block/hose_pulley_magnet"
-	},
+  "textures": {
+    "head": "create:block/mechanical_press_head",
+    "particle": "create_enchantment_industry:block/printer_fix/copper_plating",
+    "hose": "create_enchantment_industry:block/printer_fix/hose_pulley_magnet"
+  },
 	"elements": [
 		{
 			"name": "rope",
