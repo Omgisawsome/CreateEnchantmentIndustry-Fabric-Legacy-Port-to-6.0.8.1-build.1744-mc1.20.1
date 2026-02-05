@@ -1,9 +1,8 @@
 ## Welcome to **Create Enchantment Industry Fabric**
 A mod offering more tools and methods to handle experience & enchantment in Create
 
-I began working on the port again, this branch is my code, the other branch I have is mpnordland's port and I fixed the printer model. I then published this fixed version to Modrinth, and I will take suggests to further update it, as they said they will not update it anymore. I did this to better the community!
+I began working on the port again, this branch is my code, the other branch I have is mpnordland's port and I fixed the printer model. I then published this fixed version to Modrinth, and I will take suggests to further update it, as they said they will not update it anymore. I did this to make it available to all!
 
-As of now there's still a couple bugs if you find this and wanna use it go ahead.
 
 ![Fabric Logo](https://wsrv.nl/?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fnpm%2F%40intergrav%2Fdevins-badges%403%2Fassets%2Fcozy%2Fsupported%2Ffabric_64h.png&n=-1 "Fabric Logo") ![Quilt Logo](https://wsrv.nl/?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fnpm%2F%40intergrav%2Fdevins-badges%403%2Fassets%2Fcozy%2Fsupported%2Fquilt_64h.png&n=-1 "Quilt Logo")
 
